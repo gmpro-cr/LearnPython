@@ -1,0 +1,636 @@
+// PyQuest engine: state, rendering, Pyodide runner, rewards.
+
+/* ------------------------------------------------ state ------------------ */
+
+const STORE_KEY = "pyquest-progress-v1";
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (raw) {
+      const s = JSON.parse(raw);
+      if (!s.bugs) s.bugs = { cleared: {}, best: {} };
+      delete s.arcade; delete s.vaults; delete s.space;
+      return s;
+    }
+  } catch (e) { /* corrupted state falls through to fresh */ }
+  return { xp: 0, done: {}, badges: [], streak: 0, bugs: { cleared: {}, best: {} } };
+}
+
+const state = loadState();
+
+function saveState() {
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify(state));
+  } catch (e) {
+    // storage unavailable (private browsing / quota) — keep playing in memory
+  }
+}
+
+const totalExercises = STAGES.reduce((n, s) => n + s.exercises.length, 0);
+
+function stageDone(stage) {
+  return stage.exercises.every((ex) => state.done[ex.id]);
+}
+
+function stageUnlocked(idx) {
+  if (idx === 0) return true;
+  return stageDone(STAGES[idx - 1]) && bugDone(idx - 1);
+}
+
+function doneCount() {
+  return Object.keys(state.done).length;
+}
+
+function currentLevel() {
+  let lvl = LEVELS[0];
+  for (const l of LEVELS) if (state.xp >= l.at) lvl = l;
+  return lvl;
+}
+
+function nextLevel() {
+  for (const l of LEVELS) if (state.xp < l.at) return l;
+  return null;
+}
+
+/* ------------------------------------------------ python engine ---------- */
+// Pyodide lives in a Web Worker so learner code can never freeze the page.
+// A watchdog terminates runs that exceed RUN_TIMEOUT_MS (infinite loops)
+// and boots a fresh engine automatically.
+
+let worker = null;
+let pyReady = false;
+let runSeq = 0;
+const pending = new Map();
+const RUN_TIMEOUT_MS = 10000;
+
+function setEngineStatus(cls, text) {
+  const dot = document.querySelector(".engine-dot");
+  dot.classList.remove("loading", "ready", "error");
+  dot.classList.add(cls);
+  document.getElementById("engine-label").textContent = text;
+}
+
+function setRunButtons(enabled) {
+  document.querySelectorAll(".btn-run").forEach((b) => (b.disabled = !enabled));
+}
+
+function bootPython(restarting) {
+  pyReady = false;
+  setEngineStatus("loading", restarting ? "Restarting Python engine" : "Starting Python engine");
+  setRunButtons(false);
+  worker = new Worker("worker.js?v=4");
+  worker.onmessage = (e) => {
+    const msg = e.data;
+    if (msg.type === "ready") {
+      pyReady = true;
+      setEngineStatus("ready", "Python ready");
+      setRunButtons(true);
+    } else if (msg.type === "boot-error") {
+      setEngineStatus("error", "Engine failed — check connection and reload");
+    } else if (msg.type === "result") {
+      const p = pending.get(msg.id);
+      if (p) {
+        clearTimeout(p.timer);
+        pending.delete(msg.id);
+        p.resolve(JSON.parse(msg.raw));
+      }
+    }
+  };
+  worker.onerror = () => setEngineStatus("error", "Engine failed — check connection and reload");
+}
+
+function runExercise(code, check) {
+  return new Promise((resolve) => {
+    const id = ++runSeq;
+    const timer = setTimeout(() => {
+      pending.delete(id);
+      worker.terminate();
+      resolve({ out: "", error: null, passed: false, feedback: "", timedOut: true });
+      bootPython(true);
+    }, RUN_TIMEOUT_MS);
+    pending.set(id, { resolve, timer });
+    worker.postMessage({ type: "run", id, code, check });
+  });
+}
+
+/* ------------------------------------------------ syntax highlight ------- */
+// Minimal Python highlighter for lesson examples. Colors comments, strings,
+// keywords, builtins and numbers using the site's pastel ink palette.
+
+function hlPython(sourceText) {
+  const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const plain = (s) => esc(s)
+    .replace(/\b(def|return|if|elif|else|for|while|in|and|or|not|try|except|raise|class|import|from|yield|lambda|pass|break|continue|with|as)\b/g, '<span class="tok-kw">$1</span>')
+    .replace(/\b(True|False|None)\b/g, '<span class="tok-num">$1</span>')
+    .replace(/\b(print|len|range|int|str|sum|sorted|set|list|dict|next|super|isinstance|append|upper)\b/g, '<span class="tok-fn">$1</span>')
+    .replace(/\b(\d+\.?\d*)\b/g, '<span class="tok-num">$1</span>');
+  const re = /(#[^\n]*)|("(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*')/g;
+  let out = "", last = 0, m;
+  while ((m = re.exec(sourceText))) {
+    out += plain(sourceText.slice(last, m.index));
+    if (m[1]) out += '<span class="tok-com">' + esc(m[1]) + "</span>";
+    else out += '<span class="tok-str">' + esc(m[2]) + "</span>";
+    last = m.index + m[0].length;
+  }
+  return out + plain(sourceText.slice(last));
+}
+
+function highlightExamples(container) {
+  container.querySelectorAll(".code-example").forEach((pre) => {
+    [...pre.childNodes].forEach((node) => {
+      if (node.nodeType === Node.TEXT_NODE && node.textContent.trim() !== "") {
+        const span = document.createElement("span");
+        span.innerHTML = hlPython(node.textContent);
+        node.replaceWith(span);
+      }
+    });
+  });
+}
+
+/* ------------------------------------------------ svg helpers ------------ */
+
+const PASTELS = {
+  green:  { bg: "#EBF0E8", ink: "#41603F" },
+  blue:   { bg: "#E7EEF7", ink: "#2A5680" },
+  yellow: { bg: "#FAF1DF", ink: "#8C6516" },
+  red:    { bg: "#F8EAE4", ink: "#96432C" },
+};
+
+function badgeSvg(stageIdx, size) {
+  const stage = STAGES[stageIdx];
+  const c = PASTELS[stage.badge.color];
+  const s = size || 56;
+  return `
+  <svg width="${s}" height="${s}" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+    <circle cx="32" cy="32" r="30" fill="${c.bg}"/>
+    <circle cx="32" cy="32" r="30" stroke="${c.ink}" stroke-opacity="0.25" stroke-width="1.5"/>
+    <circle cx="32" cy="32" r="23" stroke="${c.ink}" stroke-opacity="0.35" stroke-width="1" stroke-dasharray="2 3"/>
+    <text x="32" y="40" text-anchor="middle" font-family="Fraunces, Georgia, serif"
+          font-size="22" font-weight="600" fill="${c.ink}">${stageIdx + 1}</text>
+  </svg>`;
+}
+
+const BUG_MINI_SVG = `<svg width="12" height="12" viewBox="-10 -10 20 20" color="currentColor"><g>${typeof BUG_GLYPH !== "undefined" ? BUG_GLYPH : ""}</g></svg>`;
+
+const CHECK_SVG = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8.5l3.2 3L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const CROSS_SVG = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
+const LOCK_SVG = `<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><rect x="3" y="7" width="10" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 7V5a2.5 2.5 0 015 0v2" stroke="currentColor" stroke-width="1.5"/></svg>`;
+
+/* ------------------------------------------------ header / sidebar ------- */
+
+function refreshHeader(bump) {
+  document.getElementById("xp-count").textContent = state.xp;
+  document.getElementById("level-tag").textContent = currentLevel().name;
+  if (bump) {
+    const pill = document.querySelector(".xp-pill");
+    pill.classList.remove("bump");
+    void pill.offsetWidth;
+    pill.classList.add("bump");
+  }
+}
+
+let activeStageIdx = null; // null = home
+
+function refreshSidebar() {
+  const list = document.getElementById("stage-list");
+  list.innerHTML = "";
+
+  TRACKS.forEach((track) => {
+    const heading = document.createElement("p");
+    heading.className = "track-heading";
+    let trackDone = 0, trackTotal = 0;
+    for (let k = track.from; k <= track.to && k < STAGES.length; k++) {
+      trackTotal++;
+      if (stageDone(STAGES[k])) trackDone++;
+    }
+    heading.innerHTML = `${track.name}<span class="track-count">${trackDone}/${trackTotal}</span>`;
+    list.appendChild(heading);
+
+    for (let idx = track.from; idx <= track.to && idx < STAGES.length; idx++) {
+      const stage = STAGES[idx];
+      const unlocked = stageUnlocked(idx);
+      const complete = stageDone(stage);
+      const btn = document.createElement("button");
+      btn.className = "stage-item" +
+        (complete ? " done" : "") +
+        (idx === activeStageIdx ? " active" : "") +
+        (!unlocked ? " locked" : "");
+      btn.innerHTML =
+        `<span class="stage-num">${complete ? CHECK_SVG : idx + 1}</span>` +
+        `<span class="stage-name">${stage.name}</span>` +
+        (!unlocked ? `<span class="stage-glyph" style="color:#BDB6A9">${LOCK_SVG}</span>` : "");
+      if (unlocked) btn.addEventListener("click", () => showStage(idx));
+      else btn.disabled = true;
+      list.appendChild(btn);
+
+      // the bug hunt linking this stage to the next
+      if (idx < STAGES.length - 1) {
+        const hReady = stageDone(stage) && !bugDone(idx);
+        const hDone = bugDone(idx);
+        const hBtn = document.createElement("button");
+        hBtn.className = "hunt-item" +
+          (activeStageIdx === "bug:" + idx ? " active" : "") +
+          (hDone ? " done" : hReady ? " ready" : " sealed");
+        hBtn.innerHTML =
+          `<span class="hunt-glyph">${hDone ? CHECK_SVG : BUG_MINI_SVG}</span>` +
+          `<span class="hunt-name">Firewall ${idx + 1}${hReady ? " — defend it" : ""}</span>`;
+        if (stageDone(stage)) hBtn.addEventListener("click", () => showBugHunt(idx));
+        else hBtn.disabled = true;
+        list.appendChild(hBtn);
+      }
+    }
+  });
+
+  // quiet two-step reset control (no browser confirm dialogs)
+  const reset = document.createElement("button");
+  reset.className = "reset-btn";
+  reset.textContent = "Reset all progress";
+  reset.addEventListener("click", () => {
+    if (reset.dataset.armed) {
+      localStorage.removeItem(STORE_KEY);
+      state.xp = 0; state.done = {}; state.badges = []; state.streak = 0;
+      refreshHeader(false);
+      showHome();
+    } else {
+      reset.dataset.armed = "1";
+      reset.textContent = "Click again to erase everything";
+      setTimeout(() => { delete reset.dataset.armed; reset.textContent = "Reset all progress"; }, 4000);
+    }
+  });
+  list.appendChild(reset);
+
+  const pct = Math.round((doneCount() / totalExercises) * 100);
+  document.getElementById("progress-fill").style.width = pct + "%";
+  const track = document.getElementById("progress-track");
+  if (track) {
+    track.setAttribute("aria-valuemax", totalExercises);
+    track.setAttribute("aria-valuenow", doneCount());
+  }
+  const nxt = nextLevel();
+  document.getElementById("progress-note").textContent =
+    `${doneCount()} of ${totalExercises} exercises` +
+    (nxt ? ` · ${nxt.name} at ${nxt.at} XP` : " · top rank reached");
+}
+
+/* ------------------------------------------------ home view -------------- */
+
+
+
+function showHome() {
+  activeStageIdx = null;
+  refreshSidebar();
+  const main = document.getElementById("main");
+  main.classList.add("main-full");
+  const started = doneCount() > 0;
+  const step = nextJourneyStep();
+
+  main.innerHTML = `
+    <section class="hero">
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <p class="hero-kicker reveal" style="--index:0">A Python course that runs in your browser</p>
+          <h1 class="hero-title reveal" style="--index:1">Learn Python by actually writing it.</h1>
+          <p class="hero-sub reveal" style="--index:2">
+            Real Python runs on this page: you type code, press Run, and earn XP
+            and badges as the language clicks into place. Three tracks take you from
+            your first print() to classes, generators and decorators. No experience
+            assumed, nothing to install.
+          </p>
+          <div class="hero-cta reveal" style="--index:3">
+            <button class="btn-run" id="cta-start">${!started ? "Begin Stage 1" : step.type === "bug" ? "Defend Sector " + (step.idx + 1) : "Continue your journey"}</button>
+          </div>
+          <div class="hero-stats reveal" style="--index:4">
+            <span><strong>${STAGES.length}</strong> stages</span>
+            <span class="stat-dot"></span>
+            <span><strong>${totalExercises}</strong> exercises</span>
+            <span class="stat-dot"></span>
+            <span><strong>3</strong> tracks, beginner to expert</span>
+          </div>
+        </div>
+        <div class="hero-demo reveal" style="--index:2">
+          <div class="editor-chrome">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            <span class="file-name">stage-8.py</span>
+          </div>
+          <pre class="demo-code"><span class="dim"># your code runs right here</span>
+<span class="kw">def</span> greet(name):
+    <span class="kw">return</span> <span class="st">f"Hello, {name}!"</span>
+
+print(greet(<span class="st">"Asha"</span>))</pre>
+          <div class="demo-output">
+            <span class="demo-output-label">Output</span>
+            Hello, Asha!
+          </div>
+          <div class="demo-verdict">${CHECK_SVG}<span>Correct &nbsp;<span class="xp-gain">+10 XP</span></span></div>
+        </div>
+      </div>
+      <div class="journey-block reveal" style="--index:5">
+        <h2 class="badge-shelf-heading">The journey</h2>
+        <p class="section-note">Every stage and every Firewall sector on one linked trail. Click any open node.</p>
+        <div class="journey-map" id="journey-map">${journeyMapSvg()}</div>
+      </div>
+    </section>`;
+
+  document.getElementById("cta-start").addEventListener("click", () => {
+    if (step.type === "bug") showBugHunt(step.idx);
+    else showStage(step.idx);
+  });
+  wireJourneyMap(document.getElementById("journey-map"));
+  window.scrollTo({ top: 0 });
+}
+
+/* ------------------------------------------------ stage view ------------- */
+
+function showStage(idx) {
+  ensureEngine();
+  activeStageIdx = idx;
+  refreshSidebar();
+  const stage = STAGES[idx];
+  const main = document.getElementById("main");
+  main.classList.remove("main-full");
+
+  const introHtml = stage.intro.join("\n");
+
+  const exercisesHtml = stage.exercises.map((ex, i) => {
+    const done = !!state.done[ex.id];
+    return `
+    <div class="exercise-card reveal" style="--index:${i + 2}" data-ex="${ex.id}">
+      <div class="exercise-head">
+        <span class="exercise-label">Exercise ${i + 1} of ${stage.exercises.length} · ${XP_PER_EXERCISE} XP</span>
+        <span class="exercise-status ${done ? "done" : "todo"}">${done ? "Complete" : "To do"}</span>
+      </div>
+      <h2 class="exercise-title">${ex.title}</h2>
+      <p class="exercise-brief">${ex.brief}</p>
+      <div class="editor-frame">
+        <div class="editor-chrome">
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          <span class="file-name">${ex.id}.py</span>
+        </div>
+        <textarea class="editor" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Python code editor: ${ex.title}"></textarea>
+      </div>
+      <div class="exercise-actions">
+        <button class="btn-run" ${pyReady ? "" : "disabled"}>Run</button>
+        <button class="btn-hint">Hint</button>
+        <span class="kbd-note"><kbd>Ctrl</kbd> + <kbd>Enter</kbd> to run</span>
+      </div>
+      <div class="hint-box">${ex.hint}</div>
+      <div class="verdict"></div>
+      <div class="output-block">
+        <div class="output-head">Output</div>
+        <div class="output-body"></div>
+      </div>
+    </div>`;
+  }).join("");
+
+  const track = TRACKS.find((t) => idx >= t.from && idx <= t.to);
+  main.innerHTML = `
+    <p class="stage-kicker reveal" style="--index:0">
+      <span class="kicker-strong">Stage ${idx + 1} of ${STAGES.length}</span>
+      <span class="kicker-dot"></span>${track ? track.name + " track" : ""}
+      <span class="kicker-dot"></span>${stage.exercises.length} exercise${stage.exercises.length > 1 ? "s" : ""} · ${stage.exercises.length * XP_PER_EXERCISE} XP
+    </p>
+    <h1 class="stage-title reveal" style="--index:0">${stage.name}</h1>
+    <div class="lesson-prose reveal" style="--index:1">${introHtml}</div>
+    ${exercisesHtml}
+    <div class="stage-footer reveal" style="--index:${stage.exercises.length + 2}">
+      <span class="muted-note">Finish every exercise to earn the “${stage.badge.label}” badge.</span>
+      ${stageDone(stage) && idx < STAGES.length - 1 && !bugDone(idx)
+        ? `<button class="btn-run" id="to-bug">Firewall ${idx + 1}: defend the sector</button>`
+        : idx + 1 < STAGES.length
+        ? `<button class="btn-hint" id="next-stage" ${stageUnlocked(idx + 1) ? "" : "disabled"}>Next stage</button>`
+        : ""}
+    </div>`;
+
+  highlightExamples(main);
+
+  // wire up each exercise card
+  stage.exercises.forEach((ex) => {
+    const card = main.querySelector(`[data-ex="${ex.id}"]`);
+    const editor = card.querySelector(".editor");
+    editor.value = ex.starter;
+    autoSize(editor);
+
+    editor.addEventListener("input", () => autoSize(editor));
+    editor.addEventListener("keydown", (e) => {
+      if (e.key === "Tab") {
+        e.preventDefault();
+        const s = editor.selectionStart;
+        editor.value = editor.value.slice(0, s) + "    " + editor.value.slice(editor.selectionEnd);
+        editor.selectionStart = editor.selectionEnd = s + 4;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+        e.preventDefault();
+        card.querySelector(".btn-run").click();
+      }
+    });
+
+    card.querySelector(".btn-hint").addEventListener("click", () => {
+      card.querySelector(".hint-box").classList.toggle("show");
+    });
+
+    card.querySelector(".btn-run").addEventListener("click", () => execute(stage, idx, ex, card));
+  });
+
+  const nextBtn = document.getElementById("next-stage");
+  if (nextBtn) nextBtn.addEventListener("click", () => {
+    if (stageUnlocked(idx + 1)) showStage(idx + 1);
+  });
+  const bugBtn = document.getElementById("to-bug");
+  if (bugBtn) bugBtn.addEventListener("click", () => showBugHunt(idx));
+
+  window.scrollTo({ top: 0 });
+}
+
+function autoSize(editor) {
+  editor.style.height = "auto";
+  editor.style.height = Math.max(120, editor.scrollHeight + 4) + "px";
+}
+
+/* ------------------------------------------------ execution -------------- */
+
+async function execute(stage, stageIdx, ex, card) {
+  if (!pyReady) return;
+  const btn = card.querySelector(".btn-run");
+  const outBlock = card.querySelector(".output-block");
+  const outBody = card.querySelector(".output-body");
+  const verdict = card.querySelector(".verdict");
+
+  btn.disabled = true;
+  btn.textContent = "Running";
+  verdict.classList.remove("show", "pass", "fail");
+
+  let result;
+  try {
+    result = await runExercise(card.querySelector(".editor").value, ex.check);
+  } catch (e) {
+    result = { out: "", error: "Something went wrong running your code. Try again.", passed: false, feedback: "" };
+  }
+
+  btn.disabled = !pyReady;
+  btn.textContent = "Run";
+
+  outBlock.classList.add("show");
+  if (result.timedOut) {
+    outBody.classList.add("error");
+    outBody.textContent = "(stopped — your code ran for more than 10 seconds)";
+  } else if (result.error) {
+    outBody.classList.add("error");
+    outBody.textContent = result.error;
+  } else {
+    outBody.classList.remove("error");
+    outBody.textContent = result.out.trim() === "" ? "(no output)" : result.out;
+  }
+
+  if (result.passed) {
+    state.streak += 1;
+    const firstTime = !state.done[ex.id];
+    if (firstTime) {
+      state.done[ex.id] = true;
+      state.xp += XP_PER_EXERCISE;
+      saveState();
+      refreshHeader(true);
+      refreshSidebar();
+      card.querySelector(".exercise-status").className = "exercise-status done";
+      card.querySelector(".exercise-status").textContent = "Complete";
+    }
+    verdict.className = "verdict show pass";
+    const praise = pick([
+      "Clean. That is exactly right.",
+      "Correct — the machine obeys.",
+      "Nailed it.",
+      "That ran perfectly.",
+      "Correct, first-class work.",
+    ]);
+    verdict.innerHTML = `${CHECK_SVG}<span>${praise}
+      ${firstTime ? `&nbsp;<span class="xp-gain">+${XP_PER_EXERCISE} XP</span>` : "&nbsp;(already banked)"}
+      ${state.streak >= 3 ? `&nbsp;— ${state.streak} correct in a row` : ""}</span>`;
+
+    if (firstTime && stageDone(stage) && !state.badges.includes(stage.id)) {
+      state.badges.push(stage.id);
+      saveState();
+      setTimeout(() => celebrateStage(stageIdx), 500);
+    }
+  } else {
+    state.streak = 0;
+    verdict.className = "verdict show fail";
+    const msg = result.timedOut
+      ? "That looks like an infinite loop — the code never finished, so I stopped it. Make sure the loop can actually end (does the condition ever become False?), then run again once the engine is back."
+      : result.error
+      ? "Python hit an error — read the message above, fix the line it mentions, and run again."
+      : (result.feedback || "Not quite — compare your output with what the task asks for.");
+    verdict.innerHTML = `${CROSS_SVG}<span>${msg}</span>`;
+  }
+}
+
+function pick(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+/* ------------------------------------------------ rewards ---------------- */
+
+function celebrateStage(stageIdx) {
+  const stage = STAGES[stageIdx];
+  const backdrop = document.getElementById("modal-backdrop");
+  const modal = document.getElementById("modal");
+  const last = stageIdx === STAGES.length - 1;
+  const lvl = currentLevel();
+
+  modal.innerHTML = `
+    <p class="modal-kicker">Stage ${stageIdx + 1} complete</p>
+    ${badgeSvg(stageIdx, 88)}
+    <h2>${last ? "You are a Python Master." : `Badge earned: ${stage.badge.label}`}</h2>
+    <p>${last
+      ? `Every stage from your first print() to decorators and a working bank — all ${totalExercises} exercises, written by your own hands. That is the whole arc, beginner to expert.`
+      : `“${stage.name}” is in the bag. Your rank: ${lvl.name}. But this stage's bugs are marching on your codebase — man the firewall.`}</p>
+    <span class="modal-xp">${state.xp} XP total</span>
+    <div class="modal-actions">
+      <button class="btn-run" id="modal-continue">${last ? "Back to the journey" : "Firewall " + (stageIdx + 1) + ": defend the sector"}</button>
+    </div>`;
+
+  backdrop.classList.remove("hidden");
+  confetti();
+  document.getElementById("modal-continue").focus();
+
+  document.getElementById("modal-continue").addEventListener("click", () => {
+    backdrop.classList.add("hidden");
+    if (last) showHome();
+    else showBugHunt(stageIdx);
+  });
+}
+
+function confetti() {
+  const layer = document.getElementById("confetti-layer");
+  const colors = ["#96432C", "#2A5680", "#41603F", "#8C6516", "#12100D"];
+  for (let i = 0; i < 90; i++) {
+    const p = document.createElement("div");
+    p.className = "confetti-piece";
+    p.style.left = Math.random() * 100 + "vw";
+    p.style.background = colors[i % colors.length];
+    p.style.opacity = String(0.5 + Math.random() * 0.5);
+    p.style.setProperty("--spin", 360 + Math.random() * 540 + "deg");
+    p.style.animationDuration = 1.4 + Math.random() * 1.6 + "s";
+    p.style.animationDelay = Math.random() * 0.4 + "s";
+    layer.appendChild(p);
+    setTimeout(() => p.remove(), 3600);
+  }
+}
+
+/* ------------------------------------------------ boot ------------------- */
+
+document.getElementById("home-link").addEventListener("click", (e) => {
+  e.preventDefault();
+  showHome();
+});
+
+// hideable side panel (preference persists per device)
+const panelToggle = document.getElementById("panel-toggle");
+function setPanel(hidden, save) {
+  document.body.classList.toggle("sidebar-hidden", hidden);
+  panelToggle.setAttribute("aria-expanded", String(!hidden));
+  panelToggle.setAttribute("aria-label", hidden ? "Show side panel" : "Hide side panel");
+  panelToggle.title = hidden ? "Show side panel" : "Hide side panel";
+  if (save) {
+    try { localStorage.setItem("pyquest-panel", hidden ? "hidden" : "open"); } catch (e) {}
+  }
+}
+panelToggle.addEventListener("click", () => {
+  setPanel(!document.body.classList.contains("sidebar-hidden"), true);
+});
+try {
+  if (localStorage.getItem("pyquest-panel") === "hidden") setPanel(true, false);
+} catch (e) {}
+
+document.getElementById("modal-backdrop").addEventListener("click", (e) => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.add("hidden");
+});
+
+document.addEventListener("keydown", (e) => {
+  const backdrop = document.getElementById("modal-backdrop");
+  if (e.key === "Escape") backdrop.classList.add("hidden");
+  if (e.key === "Tab" && !backdrop.classList.contains("hidden")) {
+    // keep focus inside the dialog
+    const focusables = backdrop.querySelectorAll("button, [href], input, textarea");
+    if (!focusables.length) return;
+    const first = focusables[0], last = focusables[focusables.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && (document.activeElement === last || !backdrop.contains(document.activeElement))) {
+      e.preventDefault(); first.focus();
+    }
+  }
+});
+
+const ambient = document.createElement("div");
+ambient.className = "ambient";
+document.body.appendChild(ambient);
+
+let engineRequested = false;
+function ensureEngine() {
+  if (engineRequested) return;
+  engineRequested = true;
+  bootPython();
+}
+
+refreshHeader(false);
+showHome();
+setEngineStatus("idle", "Python loads with your first lesson");
