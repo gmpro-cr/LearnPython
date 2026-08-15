@@ -276,10 +276,12 @@ function growVine() {
   const height = rail.offsetHeight;
   if (!height) return;
 
-  /* the first unfinished stage carries the bud: it is what happens next */
+  /* The first unfinished stage carries the bud — where the vine is heading.
+     Not gated on being unlocked: when a Firewall stands between you and it,
+     the bud is still the next stop. */
   let budIdx = -1;
   for (let i = 0; i < STAGES.length; i++) {
-    if (stageUnlocked(i) && !stageDone(STAGES[i])) { budIdx = i; break; }
+    if (!stageDone(STAGES[i])) { budIdx = i; break; }
   }
 
   const marks = [];
