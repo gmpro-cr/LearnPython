@@ -36,7 +36,7 @@
   --sans: 'Geist Sans', 'Helvetica Neue', sans-serif;
   --mono: 'Geist Mono', 'SF Mono', monospace;
 
-  --measure: 640px;       /* ~68 characters: prose and code share this column */
+  --measure: 860px;       /* prose and code share this column; body size rises with it */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-draw: cubic-bezier(0.65, 0, 0.35, 1);
 }
@@ -303,7 +303,9 @@ body.sidebar-hidden .sidebar {
 
 /* ---------- Main / lesson ---------- */
 
-.main { max-width: 920px; min-width: 0; }
+/* one column edge for prose, examples and exercise cards alike, centred in the
+   track so the leftover space is shared rather than dumped on the right */
+.main { max-width: var(--measure); min-width: 0; margin: 0 auto; }
 .main.main-full { max-width: none; }
 
 .reveal {
@@ -350,10 +352,12 @@ body.sidebar-hidden .sidebar {
   color: var(--ink);
 }
 
+/* the column is wide, so the type gets bigger with it — a longer line at a
+   larger size reads no worse, and beginners get more legible text */
 .lesson-prose {
   color: var(--ink-soft);
-  font-size: 15.5px;
-  line-height: 1.75;
+  font-size: 16.5px;
+  line-height: 1.72;
   max-width: var(--measure);
 }
 /* ragged right: easier for non-native readers than justified, and no rivers */
@@ -512,8 +516,10 @@ body.sidebar-hidden .sidebar {
 
 /* ---------- Exercise cards ---------- */
 
+/* each exercise sits on its own wash, so 1, 2 and 3 are distinguishable
+   before you read a word of them */
 .exercise-card {
-  background: var(--surface);
+  background: var(--stage-wash, var(--surface));
   border: 1px solid var(--border);
   border-radius: 12px;
   margin-top: 26px;
@@ -536,7 +542,7 @@ body.sidebar-hidden .sidebar {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--muted);
+  color: var(--stage-ink, var(--muted));
 }
 
 .exercise-status {
@@ -547,8 +553,8 @@ body.sidebar-hidden .sidebar {
   border-radius: 9999px;
   padding: 3px 11px;
 }
-.exercise-status.todo { background: var(--bone); color: var(--muted); }
-.exercise-status.done { background: var(--pastel-green); color: var(--pastel-green-ink); }
+.exercise-status.todo { background: var(--surface); color: var(--muted); }
+.exercise-status.done { background: var(--surface); color: var(--stage-ink, var(--fern)); }
 
 .exercise-title {
   font-family: var(--serif);
@@ -567,7 +573,7 @@ body.sidebar-hidden .sidebar {
 .exercise-brief code {
   font-family: var(--mono);
   font-size: 0.86em;
-  background: var(--bone);
+  background: var(--surface);
   border: 1px solid var(--border);
   color: var(--ink);
   border-radius: 4px;
@@ -588,7 +594,7 @@ body.sidebar-hidden .sidebar {
   gap: 6px;
   padding: 9px 14px;
   border-bottom: 1px solid var(--border);
-  background: var(--bone);
+  background: var(--surface);
 }
 .editor-chrome .dot {
   width: 9px; height: 9px; border-radius: 50%;
@@ -676,8 +682,9 @@ kbd {
 .hint-box {
   margin: -4px 28px 18px;
   padding: 12px 18px;
-  background: var(--pastel-yellow);
-  color: var(--pastel-yellow-ink);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--ink-soft);
   border-radius: 8px;
   font-size: 13.5px;
   display: none;
@@ -699,7 +706,7 @@ kbd {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--muted);
-  background: var(--bone);
+  background: var(--surface);
   border-bottom: 1px solid var(--border);
   padding: 6px 14px;
 }
@@ -708,6 +715,7 @@ kbd {
   font-family: var(--mono);
   font-size: 13px;
   line-height: 1.7;
+  background: var(--surface);
   padding: 12px 16px;
   white-space: pre-wrap;
   color: var(--ink);
@@ -741,7 +749,7 @@ kbd {
   position: absolute;
   inset: 0;
   z-index: 0;
-  background: var(--stage-wash, var(--fern-wash));
+  background: var(--surface);
   transform: scaleX(0);
   transform-origin: left center;
   animation: wash-wipe 200ms var(--ease-out) forwards;

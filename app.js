@@ -432,8 +432,11 @@ function showStage(idx) {
 
   const exercisesHtml = stage.exercises.map((ex, i) => {
     const done = !!state.done[ex.id];
+    /* each exercise takes the next ink along, starting from the stage's own —
+       so the stage still leads, and the three cards are told apart at a glance */
+    const exTone = ILLO.stageInk(idx + i);
     return `
-    <div class="exercise-card reveal" style="--index:${i + 2}" data-ex="${ex.id}">
+    <div class="exercise-card reveal" style="--index:${i + 2};--stage-ink:${exTone.ink};--stage-wash:${exTone.wash}" data-ex="${ex.id}">
       <div class="exercise-head">
         <span class="exercise-label">Exercise ${i + 1} of ${stage.exercises.length} · ${XP_PER_EXERCISE} XP</span>
         <span class="exercise-status ${done ? "done" : "todo"}">${done ? "Complete" : "To do"}</span>
