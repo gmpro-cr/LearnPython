@@ -35,6 +35,8 @@ in titles.
    surface. What is ahead is drawn as pencil underdrawing — not yet drawn, rather than shut out.
 3. One linked journey: stages and game sectors form a single path, never parallel modes. The beetles
    in the Firewall are the same specimen as the beetles on the map.
-4. Static site, no accounts; everything must work from localStorage and a CDN.
+4. Static site, no build step; everything must work from localStorage and a CDN. Signing in is
+   OPTIONAL and only adds cross-device sync: the course must always open, run and save with no
+   account at all, and must survive the sync service being unreachable without costing a lesson.
 5. Errors are normal. A wrong answer gets a hairline and a warmed hint button — never a shake, a red
    panel, or anything that reads as a scolding.

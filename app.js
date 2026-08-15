@@ -25,6 +25,43 @@ function saveState() {
   } catch (e) {
     // storage unavailable (private browsing / quota) — keep playing in memory
   }
+  // and, if someone is signed in, send it on. No-op otherwise.
+  if (typeof queueSync === "function") queueSync(readLocalProgress());
+}
+
+/* The two hooks sync.js needs. Progress lives here; sync.js only moves it. */
+
+function readLocalProgress() {
+  return {
+    xp: state.xp,
+    done: Object.assign({}, state.done),
+    badges: (state.badges || []).slice(),
+    streak: state.streak || 0,
+    bugs: {
+      cleared: Object.assign({}, (state.bugs && state.bugs.cleared) || {}),
+      best: Object.assign({}, (state.bugs && state.bugs.best) || {}),
+    },
+  };
+}
+
+/* Merged progress arrives from the server: adopt it, persist it locally, and
+   redraw whatever is on screen so the vine and the counts match immediately. */
+function applyProgress(progress) {
+  if (!progress) return;
+  state.xp = Number(progress.xp) || 0;
+  state.done = progress.done || {};
+  state.badges = progress.badges || [];
+  state.streak = Number(progress.streak) || 0;
+  state.bugs = progress.bugs || { cleared: {}, best: {} };
+
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify(state));
+  } catch (e) { /* nothing more to do than keep it in memory */ }
+
+  refreshHeader(false);
+  if (activeStageIdx === null) showHome();
+  else if (typeof activeStageIdx === "string" && activeStageIdx.startsWith("bug:")) refreshSidebar();
+  else showStage(activeStageIdx);
 }
 
 const totalExercises = STAGES.reduce((n, s) => n + s.exercises.length, 0);
@@ -737,6 +774,64 @@ function ensureEngine() {
   bootPython();
 }
 
+/* ------------------------------------------------ account control -------- */
+
+/* One control in the topbar. Signed out it offers sync; signed in it shows who
+   you are and how the last save went. With sync unconfigured it never appears,
+   so the course looks exactly as it did before any of this existed. */
+function renderAccount(s) {
+  const slot = document.getElementById("account-slot");
+  if (!slot) return;
+
+  if (s.status === "off") {
+    slot.innerHTML = "";
+    return;
+  }
+
+  const who = typeof syncIdentity === "function" ? syncIdentity() : null;
+
+  if (!who) {
+    /* If the server is unreachable, say so where it can be read rather than
+       hiding it in a tooltip — and keep the button, since it may come back. */
+    const unavailable = s.status === "offline";
+    slot.innerHTML =
+      (unavailable ? `<span class="account-msg">${s.detail}</span>` : "") +
+      `<button class="account-btn" id="account-signin" ${unavailable ? 'data-quiet="1"' : ""} title="${
+        s.detail || "Save your journey and pick it up on another device"
+      }">${s.status === "syncing" ? "Checking…" : "Sign in to save"}</button>`;
+    const btn = document.getElementById("account-signin");
+    if (btn) btn.addEventListener("click", () => signInWithGoogle());
+    return;
+  }
+
+  const mark =
+    s.status === "synced" ? "saved"
+    : s.status === "syncing" ? "syncing…"
+    : "on this device";
+
+  slot.innerHTML =
+    `<div class="account">` +
+      (who.avatar
+        ? `<img class="account-avatar" src="${who.avatar}" alt="" referrerpolicy="no-referrer" />`
+        : `<span class="account-avatar account-initial">${(who.name || "?")[0].toUpperCase()}</span>`) +
+      `<span class="account-name">${who.name}</span>` +
+      `<span class="account-state ${s.status}">${mark}</span>` +
+      `<button class="account-out" id="account-signout">Sign out</button>` +
+    `</div>`;
+  const out = document.getElementById("account-signout");
+  if (out) out.addEventListener("click", () => signOutOfSync());
+}
+
+if (typeof onSyncChange === "function") {
+  onSyncChange(renderAccount);
+}
+
 refreshHeader(false);
 showHome();
 setEngineStatus("idle", "Python loads with your first lesson");
+
+/* Sync boots last and never blocks the course: if it fails, everything above
+   has already rendered and keeps working from localStorage. */
+if (typeof initSync === "function") {
+  initSync().catch(() => { /* deliberately silent — see sync.js */ });
+}

@@ -5,9 +5,10 @@ The site has no framework and no build step, so these have no dependencies eithe
 ```bash
 python3 evals/run.py          # structure + all 56 exercises   (~1s)
 node evals/balance.cjs        # all 19 Firewall sectors        (~1s)
+node evals/sync.cjs           # cross-device progress merge    (instant)
 ```
 
-Both exit non-zero on failure. For the browser check, serve the repo and open
+All three exit non-zero on failure. For the browser check, serve the repo and open
 `/evals/evals.html`.
 
 ## Why these exist
@@ -48,6 +49,13 @@ The bot is deliberately not tuned to pass. It buys by damage-per-credit, holds a
 (1 damage — it is a slower, not a weapon) and three Sprinklers, and stops at twelve defences.
 An earlier version bought the most expensive tower first and lost sectors 8, 9 and 11; that was
 a bad bot, not bad balance.
+
+**`sync.cjs`** — `mergeProgress` from `sync.js`, the function that decides what happens to work
+already done when someone signs in for the first time. Getting it wrong loses finished stages —
+the one bug in that feature a learner would never forgive and might never report. Covers: local
+work with an empty server, a fresh device joining an account with progress, both sides holding
+different work (union, never a winner), the better Firewall run kept, badges not duplicating, an
+untouched device not wiping an account, and a malformed row not throwing.
 
 **`evals.html`** — the same solutions through the site's own `worker.js` and real Pyodide.
 `run.py` uses CPython, which the site does not; anything green there and red here is a CPython/
