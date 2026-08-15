@@ -401,6 +401,80 @@ body.sidebar-hidden .sidebar {
 .tok-num { color: var(--amber); }
 .tok-fn  { color: var(--terracotta); }
 
+/* ---------- Illustrations ---------- */
+
+.illo { display: block; overflow: visible; }
+
+/* Linework inks itself in. illustrations.js measures each path, writes its
+   length to --len for the hidden state, and runs the draw from JS — Chrome
+   will not interpolate a keyframe built from var(). Unarmed paths show. */
+.illo .ink { stroke-dasharray: var(--len, none); stroke-dashoffset: var(--len, 0); }
+
+/* the wash and the shading arrive after the drawing exists */
+.illo .wash, .illo .wash-shape { fill: currentColor; stroke: none; opacity: 0; }
+.illo .stipple { fill: currentColor; stroke: none; opacity: 0; }
+.illo.drawn .wash, .illo.drawn .wash-shape {
+  animation: wash-in 700ms var(--ease-out) forwards;
+  animation-delay: 480ms;
+}
+.illo.drawn .stipple {
+  animation: stipple-in 700ms var(--ease-out) forwards;
+  animation-delay: 700ms;
+}
+@keyframes wash-in { to { opacity: 0.13; } }
+@keyframes stipple-in { to { opacity: 0.32; } }
+
+/* seeds, blooms and other closed shapes carry their own wash */
+.illo .seed ellipse:not(.wash-shape),
+.illo .bloom { fill: none; stroke: currentColor; }
+.illo .bloom { opacity: 0; }
+.illo.drawn .bloom { animation: wash-in 500ms var(--ease-out) forwards; animation-delay: 900ms; }
+.illo.drawn .bloom { opacity: 1; }
+
+.plate-illo { width: 100%; height: auto; color: var(--stage-ink, var(--fern)); }
+
+/* already drawn, or drawing suppressed */
+.illo.instant .ink { stroke-dashoffset: 0; animation: none; }
+.illo.instant .wash, .illo.instant .wash-shape { opacity: 0.13; animation: none; }
+.illo.instant .stipple { opacity: 0.32; animation: none; }
+.illo.instant .bloom { opacity: 1; animation: none; }
+
+/* ---------- Medallions ---------- */
+
+.medallion { color: var(--stage-ink, var(--fern)); }
+.medallion .medallion-ground { fill: currentColor; opacity: 0.08; stroke: none; }
+.medallion .medallion-frame circle { fill: none; stroke: currentColor; }
+.medallion .medallion-frame .hair { opacity: 0.45; stroke-width: 1; }
+.medallion .medallion-plate { fill: var(--surface); stroke: none; }
+.medallion .medallion-num {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  fill: currentColor;
+  stroke: none;
+}
+.medallion circle:not(.medallion-ground):not(.hair):not(.wash-shape) { fill: none; }
+
+/* ---------- Vine ---------- */
+
+.vine { overflow: visible; }
+.vine .stem-pencil { stroke: var(--pencil); stroke-width: 1.2; fill: none; stroke-dasharray: 3 5; }
+.vine .stem-ink { stroke: var(--fern); stroke-width: 1.5; fill: none; }
+.vine .vine-leaf .wash { fill: currentColor; opacity: 0.16; stroke: none; }
+.vine .vine-leaf .ink { stroke: currentColor; fill: none; }
+.vine .vine-bud .ink { stroke: currentColor; fill: none; }
+.vine .vine-bud .bud-head { fill: var(--surface); stroke: currentColor; stroke-width: 1.3; }
+
+/* a new leaf grows when the stage it belongs to is finished; the linework is
+   animated from JS (ILLO.draw), the wash follows it in */
+.vine .vine-leaf.fresh .wash { opacity: 0; animation: leaf-wash 500ms var(--ease-out) 500ms forwards; }
+@keyframes leaf-wash { to { opacity: 0.16; } }
+
+/* ---------- Pressed specimen (locked) ---------- */
+
+.pressed-mark { color: var(--line-strong); }
+.pressed-mark .pressed { fill: currentColor; stroke: none; opacity: 0.55; }
+
 /* ---------- Field-guide type ---------- */
 
 /* PLATE 01 ———————— FOUNDATIONS */
