@@ -266,6 +266,13 @@ function growVine() {
   const rail = layer && layer.parentElement;
   if (!layer || !rail) return;
 
+  /* under 900px the stage list turns into a horizontal chip rail, where a
+     climbing stem makes no sense */
+  if (window.matchMedia("(max-width: 900px)").matches) {
+    layer.innerHTML = "";
+    return;
+  }
+
   const height = rail.offsetHeight;
   if (!height) return;
 

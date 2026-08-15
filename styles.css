@@ -1329,6 +1329,30 @@ kbd {
   .exercise-actions { padding-left: 20px; padding-right: 20px; }
   .modal { padding: 36px 28px; margin: 0 16px; }
   .footer-inner { padding: 16px 20px; }
+
+  /* the vine is a vertical climb; the chip rail is not */
+  .vine-layer { display: none; }
+  .stage-list { padding-left: 0; }
+  .stage-num { width: auto; }
+
+  .hero-plate { padding: 0; }
+  .hero-plate .plate-illo { max-width: 210px; }
+  .track-plates { grid-template-columns: minmax(0, 1fr); gap: 34px; margin-top: 20px; }
+  .track-plate { flex-direction: row; align-items: center; gap: 20px; }
+  .track-plate-art { height: auto; flex: 0 0 96px; }
+  .track-plate-art .plate-illo { max-width: 96px; max-height: 128px; }
+  .tracks-block, .specimen-block { margin-top: 42px; padding-top: 24px; }
+
+  .stage-head { gap: 16px; margin-bottom: 18px; }
+  .stage-vignette { align-self: flex-start; }
+  .stage-vignette .medallion { width: 44px; height: 44px; }
+}
+
+/* one column is too cramped for a side-by-side track plate */
+@media (max-width: 520px) {
+  .track-plate { flex-direction: column; align-items: flex-start; }
+  .track-plate-art { flex: none; align-self: center; }
+  .stage-vignette { display: none; }
 }
 
 /* ---------- Reduced motion ---------- */
@@ -1343,4 +1367,16 @@ kbd {
   .jnode { animation: none; }
   .verdict.show { animation: none; }
   .shell, .sidebar, .modal, .exercise-card, .btn-run { transition: none; }
+
+  /* every drawing arrives finished: the reward still registers, it just does
+     not move (illustrations.js also skips arming the paths entirely) */
+  .illo .ink { stroke-dasharray: none; stroke-dashoffset: 0; animation: none; }
+  .illo .wash, .illo .wash-shape { opacity: 0.13; animation: none; }
+  .illo .stipple { opacity: 0.32; animation: none; }
+  .illo .bloom { opacity: 1; animation: none; }
+  .vine .vine-leaf .wash { opacity: 0.16; animation: none; }
+  .verdict.pass::before { transform: scaleX(1); animation: none; }
+  .verdict.fail::after { transform: scaleX(1); animation: none; }
+  .modal-gem, .modal .medallion { animation: none; }
+  .stage-item:hover .stage-num { transition: none; }
 }
