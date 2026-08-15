@@ -995,12 +995,16 @@ kbd {
 }
 .modal p { color: var(--ink-soft); font-size: 14px; margin-bottom: 26px; }
 .modal .modal-xp {
+  display: inline-block;
+  margin-bottom: 22px;
   font-family: var(--mono);
-  color: var(--pastel-yellow-ink);
-  background: var(--pastel-yellow);
-  border-radius: 9999px;
-  padding: 4px 14px;
-  font-size: 12.5px;
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
+  color: var(--amber);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 12px;
 }
 
 /* ---------- Confetti ---------- */
@@ -1012,19 +1016,36 @@ kbd {
   z-index: 200;
   overflow: hidden;
 }
-.confetti-piece {
+/* seeds fall straight and fast; petals are wider and drift */
+.seed-fall {
   position: absolute;
-  top: -16px;
-  width: 8px;
-  height: 14px;
-  border-radius: 2px;
-  animation: confetti-fall linear forwards;
+  top: -18px;
+  animation: seed-fall cubic-bezier(0.4, 0, 0.7, 1) forwards;
 }
-@keyframes confetti-fall {
+.seed-fall.seed {
+  width: 5px;
+  height: 9px;
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+}
+.seed-fall.petal {
+  width: 11px;
+  height: 7px;
+  border-radius: 60% 40% 60% 40% / 70% 70% 30% 30%;
+}
+@keyframes seed-fall {
   to {
-    transform: translateY(110vh) rotate(var(--spin, 540deg));
-    opacity: 0.9;
+    transform: translate3d(var(--drift, 0), 110vh, 0) rotate(var(--spin, 360deg));
+    opacity: 0;
   }
+}
+
+/* the badge stamps into the modal like a specimen being pressed */
+.modal-gem, .modal .medallion {
+  animation: stamp-in 400ms var(--ease-out) 120ms backwards;
+}
+@keyframes stamp-in {
+  from { opacity: 0; transform: scale(0.94); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 /* ---------- Paper ---------- */
@@ -1314,7 +1335,7 @@ kbd {
 
 @media (prefers-reduced-motion: reduce) {
   .reveal { animation: none; opacity: 1; transform: none; }
-  .confetti-piece { display: none; }
+  .seed-fall { display: none; }
   .xp-pill.bump { animation: none; }
   html { scroll-behavior: auto; }
   .engine-dot.loading { animation: none; }

@@ -150,25 +150,10 @@ function highlightExamples(container) {
 
 /* ------------------------------------------------ svg helpers ------------ */
 
-const PASTELS = {
-  green:  { bg: "#EBF0E8", ink: "#41603F" },
-  blue:   { bg: "#E7EEF7", ink: "#2A5680" },
-  yellow: { bg: "#FAF1DF", ink: "#8C6516" },
-  red:    { bg: "#F8EAE4", ink: "#96432C" },
-};
-
 function badgeSvg(stageIdx, size) {
-  const stage = STAGES[stageIdx];
-  const c = PASTELS[stage.badge.color];
-  const s = size || 56;
-  return `
-  <svg width="${s}" height="${s}" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-    <circle cx="32" cy="32" r="30" fill="${c.bg}"/>
-    <circle cx="32" cy="32" r="30" stroke="${c.ink}" stroke-opacity="0.25" stroke-width="1.5"/>
-    <circle cx="32" cy="32" r="23" stroke="${c.ink}" stroke-opacity="0.35" stroke-width="1" stroke-dasharray="2 3"/>
-    <text x="32" y="40" text-anchor="middle" font-family="Fraunces, Georgia, serif"
-          font-size="22" font-weight="600" fill="${c.ink}">${stageIdx + 1}</text>
-  </svg>`;
+  return ILLO.medallion(stageIdx, size || 56, {
+    label: `Badge for stage ${stageIdx + 1}: ${STAGES[stageIdx].badge.label}`,
+  });
 }
 
 const BUG_MINI_SVG = `<svg width="12" height="12" viewBox="-10 -10 20 20" color="currentColor"><g>${typeof BUG_GLYPH !== "undefined" ? BUG_GLYPH : ""}</g></svg>`;
@@ -664,20 +649,24 @@ function celebrateStage(stageIdx) {
   });
 }
 
+/* seeds and petals coming loose, in the six inks — a plant shedding, not a
+   party popper */
 function confetti() {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   const layer = document.getElementById("confetti-layer");
-  const colors = ["#96432C", "#2A5680", "#41603F", "#8C6516", "#12100D"];
-  for (let i = 0; i < 90; i++) {
+  const inks = ILLO.inks;
+  for (let i = 0; i < 54; i++) {
     const p = document.createElement("div");
-    p.className = "confetti-piece";
+    p.className = "seed-fall " + (i % 3 === 0 ? "petal" : "seed");
     p.style.left = Math.random() * 100 + "vw";
-    p.style.background = colors[i % colors.length];
-    p.style.opacity = String(0.5 + Math.random() * 0.5);
-    p.style.setProperty("--spin", 360 + Math.random() * 540 + "deg");
-    p.style.animationDuration = 1.4 + Math.random() * 1.6 + "s";
-    p.style.animationDelay = Math.random() * 0.4 + "s";
+    p.style.background = inks[i % inks.length].ink;
+    p.style.opacity = String(0.45 + Math.random() * 0.4);
+    p.style.setProperty("--spin", 180 + Math.random() * 420 + "deg");
+    p.style.setProperty("--drift", (Math.random() * 120 - 60) + "px");
+    p.style.animationDuration = 1.8 + Math.random() * 1.6 + "s";
+    p.style.animationDelay = Math.random() * 0.5 + "s";
     layer.appendChild(p);
-    setTimeout(() => p.remove(), 3600);
+    setTimeout(() => p.remove(), 4000);
   }
 }
 
