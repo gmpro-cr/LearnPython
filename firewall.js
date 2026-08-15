@@ -12,13 +12,13 @@ const FW_WAYPOINTS = [
 ];
 
 const FW_TOWERS = {
-  print: { key: "print",  label: "print()", cost: 50,  range: 95,  dmg: 9,  rate: 0.55, color: "#2A5680", bg: "#E7EEF7", unlockSector: 0,
+  print: { key: "print",  label: "print()", cost: 50,  range: 95,  dmg: 9,  rate: 0.55, color: "#2B4C7E", bg: "#E1E9F5", unlockSector: 0,
            blurb: "Reliable single-target zapper." },
-  loop:  { key: "loop",   label: "for",     cost: 80,  range: 75,  dmg: 5,  rate: 0.9,  color: "#41603F", bg: "#EBF0E8", unlockSector: 3, aoe: true,
+  loop:  { key: "loop",   label: "for",     cost: 80,  range: 75,  dmg: 5,  rate: 0.9,  color: "#2E5E3A", bg: "#E3EEDF", unlockSector: 3, aoe: true,
            blurb: "Pulses damage to every bug in range." },
-  cond:  { key: "cond",   label: "if",      cost: 60,  range: 85,  dmg: 1,  rate: 0.7,  color: "#8C6516", bg: "#FAF1DF", unlockSector: 7, slow: 0.45,
+  cond:  { key: "cond",   label: "if",      cost: 60,  range: 85,  dmg: 1,  rate: 0.7,  color: "#A97708", bg: "#FAEDD0", unlockSector: 7, slow: 0.45,
            blurb: "Filters the stream — slows bugs it hits." },
-  func:  { key: "func",   label: "def",     cost: 120, range: 150, dmg: 42, rate: 1.5,  color: "#96432C", bg: "#F8EAE4", unlockSector: 11,
+  func:  { key: "func",   label: "def",     cost: 120, range: 150, dmg: 42, rate: 1.5,  color: "#B4462A", bg: "#F8E3D8", unlockSector: 11,
            blurb: "Long-range heavy cannon. Slow, devastating." },
 };
 
@@ -210,7 +210,7 @@ function fwHit(b, dmg) {
     const bump = Math.floor(fw.sector / 3) * 3;
     fw.credits += (b.kind === "tank" ? 26 : b.kind === "runner" ? 8 : 12) + bump;
     const [bx, by] = fwPointAt(b.dist);
-    fw.effects.push({ kind: "pop", x: bx, y: by, ttl: 0.3, color: "#96432C" });
+    fw.effects.push({ kind: "pop", x: bx, y: by, ttl: 0.3, color: "#B4462A" });
   }
 }
 
@@ -451,28 +451,76 @@ function fwHud() {
 
 /* ------------------------------------------------ render ----------------- */
 
+/* A bug, drawn the way the field guide draws a beetle: wash body, ink
+   outline, elytra seam, six legs, two antennae. Marching left to right, so
+   the head faces the codebase it is walking toward. */
+function fwDrawBeetle(c, x, y, r, ink, heading) {
+  const w = r, h = r * 1.25;
+  c.save();
+  c.translate(x, y);
+  c.rotate((heading || 0) + Math.PI / 2);
+  c.lineWidth = 1.2;
+  c.lineCap = "round";
+  c.strokeStyle = ink;
+
+  // legs first, so the body sits over their roots
+  for (let s = -1; s <= 1; s += 2) {
+    for (let l = -1; l <= 1; l++) {
+      c.beginPath();
+      c.moveTo(0, l * h * 0.42);
+      c.quadraticCurveTo(s * w * 1.2, l * h * 0.5, s * w * 1.7, l * h * 0.95);
+      c.stroke();
+    }
+  }
+
+  // body
+  c.fillStyle = ink + "22";
+  c.beginPath();
+  c.ellipse(0, h * 0.12, w, h, 0, 0, Math.PI * 2);
+  c.fill();
+  c.stroke();
+
+  // elytra seam and the head end
+  c.beginPath();
+  c.moveTo(0, -h * 0.55);
+  c.lineTo(0, h * 0.95);
+  c.stroke();
+  c.beginPath();
+  c.ellipse(0, -h * 0.85, w * 0.5, h * 0.3, 0, 0, Math.PI * 2);
+  c.stroke();
+
+  // antennae
+  for (let s = -1; s <= 1; s += 2) {
+    c.beginPath();
+    c.moveTo(s * w * 0.28, -h * 1.05);
+    c.quadraticCurveTo(s * w * 0.9, -h * 1.5, s * w * 1.4, -h * 1.6);
+    c.stroke();
+  }
+  c.restore();
+}
+
 function fwDraw() {
   const c = fw.ctx;
   if (!c) return;
   const W = FW_GRID_W * FW_CELL, H = FW_GRID_H * FW_CELL;
 
-  c.fillStyle = "#FCFBF8";
+  c.fillStyle = "#FBF7ED";
   c.fillRect(0, 0, W, H);
-  c.strokeStyle = "rgba(0,0,0,0.045)";
+  c.strokeStyle = "rgba(23,19,9,0.05)";
   c.lineWidth = 1;
   for (let x = 1; x < FW_GRID_W; x++) { c.beginPath(); c.moveTo(x * FW_CELL + 0.5, 0); c.lineTo(x * FW_CELL + 0.5, H); c.stroke(); }
   for (let y = 1; y < FW_GRID_H; y++) { c.beginPath(); c.moveTo(0, y * FW_CELL + 0.5); c.lineTo(W, y * FW_CELL + 0.5); c.stroke(); }
 
   // the path
-  c.strokeStyle = "#EDEAE3";
+  c.strokeStyle = "#F2EBD9";
   c.lineWidth = 30;
   c.lineJoin = "round";
   c.lineCap = "round";
   c.beginPath();
   fw.pathPx.forEach(([x, y], k) => (k ? c.lineTo(x, y) : c.moveTo(x, y)));
   c.stroke();
-  c.strokeStyle = "#D8D3C8";
-  c.lineWidth = 1.5;
+  c.strokeStyle = "#D3C9B2";
+  c.lineWidth = 1.3;
   c.setLineDash([5, 7]);
   c.beginPath();
   fw.pathPx.forEach(([x, y], k) => (k ? c.lineTo(x, y) : c.moveTo(x, y)));
@@ -481,7 +529,7 @@ function fwDraw() {
 
   // the codebase to defend (path end)
   const [ex, ey] = fw.pathPx[fw.pathPx.length - 1];
-  c.fillStyle = "#12100D";
+  c.fillStyle = "#171309";
   c.font = "600 11px 'Geist Mono', monospace";
   c.textAlign = "center";
   c.fillText("{ code }", ex - 18, ey + 4);
@@ -517,28 +565,21 @@ function fwDraw() {
     }
   }
 
-  // bugs
+  // bugs, drawn as the same entomological beetle the map uses
   for (const b of fw.bugs) {
     const [x, y] = fwPointAt(b.dist);
     const r = b.kind === "tank" ? 11 : b.kind === "runner" ? 6 : 8;
-    c.strokeStyle = "#35312B";
-    c.lineWidth = 1.2;
-    for (let a = 0; a < 3; a++) {
-      const ang = (a - 1) * 0.7;
-      c.beginPath();
-      c.moveTo(x - Math.cos(ang) * (r + 4), y - Math.sin(ang) * (r + 4));
-      c.lineTo(x + Math.cos(ang) * (r + 4), y + Math.sin(ang) * (r + 4));
-      c.stroke();
-    }
-    c.fillStyle = b.kind === "tank" ? "#35312B" : b.kind === "runner" ? "#8C6516" : "#5A554D";
-    if (b.slow > 0) c.fillStyle = "#2A5680";
-    c.beginPath();
-    c.ellipse(x, y, r, r * 1.2, 0, 0, Math.PI * 2);
-    c.fill();
+    const ink = b.slow > 0 ? "#2B4C7E"
+      : b.kind === "tank" ? "#171309"
+      : b.kind === "runner" ? "#A97708"
+      : "#3A342A";
+    const [ax, ay] = fwPointAt(Math.min(b.dist + 6, fw.pathLen));
+    const heading = ax === x && ay === y ? 0 : Math.atan2(ay - y, ax - x);
+    fwDrawBeetle(c, x, y, r, ink, heading);
     // hp bar
-    c.fillStyle = "#E8E4DC";
+    c.fillStyle = "#E3D9C2";
     c.fillRect(x - 10, y - r - 9, 20, 3);
-    c.fillStyle = "#41603F";
+    c.fillStyle = "#2E5E3A";
     c.fillRect(x - 10, y - r - 9, 20 * Math.max(0, b.hp / b.maxHp), 3);
   }
 
@@ -567,9 +608,9 @@ function fwDraw() {
   // phase overlays
   if (fw.phase === "lost" || fw.phase === "won" || fw.phase === "build") {
     if (fw.phase !== "build" || fw.towers.length === 0) {
-      c.fillStyle = "rgba(251,251,250,0.72)";
+      c.fillStyle = "rgba(251,247,237,0.78)";
       c.fillRect(0, 0, W, H);
-      c.fillStyle = "#12100D";
+      c.fillStyle = "#171309";
       c.font = "500 24px Fraunces, Georgia, serif";
       c.textAlign = "center";
       c.fillText(
@@ -577,7 +618,7 @@ function fwDraw() {
         fw.phase === "won" ? "Sector secured" :
         "Build your defenses",
         W / 2, H / 2 - 8);
-      c.fillStyle = "#8C8578";
+      c.fillStyle = "#9A907C";
       c.font = "12px 'Geist Mono', monospace";
       c.fillText(
         fw.phase === "lost" ? "Rebuild and try a new layout — no penalty" :
