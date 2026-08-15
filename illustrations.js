@@ -535,6 +535,13 @@ function leafMark(x, y, len, angleDeg, seed) {
 
 /* ------------------------------------------------ small marks ----------- */
 
+/* the tick on a correct answer, drawn rather than stamped */
+function drawCheck(size) {
+  return svgWrap("0 0 16 16", ink("M 3 8.4 L 6.3 11.6 L 13 4.6", 0), {
+    class: "check-mark", width: size || 15, height: size || 15,
+  });
+}
+
 /* what a locked stage gets instead of a padlock: a pressed, faded specimen */
 function drawPressed(size) {
   const L = leafAt(8, 14, 11, -62, 3);
@@ -639,6 +646,7 @@ const ILLO = {
   medallion: drawMedallion,
   medallionInner,
   leafMark,
+  check: drawCheck,
   pressed: drawPressed,
 
   trackPlate(name) {

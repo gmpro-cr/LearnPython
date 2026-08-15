@@ -328,6 +328,19 @@ body.sidebar-hidden .sidebar {
 .kicker-strong { color: var(--ink); font-weight: 600; }
 .kicker-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--line-strong); flex-shrink: 0; }
 
+.stage-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 28px;
+  max-width: var(--measure);
+  margin-bottom: 22px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+}
+.stage-head-text { min-width: 0; }
+.stage-vignette { flex-shrink: 0; }
+
 .stage-title {
   font-family: var(--serif);
   font-size: 42px;
@@ -335,10 +348,6 @@ body.sidebar-hidden .sidebar {
   letter-spacing: -0.03em;
   line-height: 1.1;
   color: var(--ink);
-  margin-bottom: 20px;
-  padding-bottom: 18px;
-  border-bottom: 1px solid var(--border);
-  max-width: var(--measure);
 }
 
 .lesson-prose {
@@ -722,9 +731,42 @@ kbd {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
 }
-.verdict.pass { background: var(--pastel-green); color: var(--pastel-green-ink); }
-.verdict.fail { background: var(--pastel-red); color: var(--pastel-red-ink); }
+
+/* correct: the well fills with this stage's wash, left to right */
+.verdict { position: relative; overflow: hidden; background: none; }
+.verdict > * { position: relative; z-index: 1; }
+.verdict.pass { color: var(--stage-ink, var(--fern)); }
+.verdict.pass::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: var(--stage-wash, var(--fern-wash));
+  transform: scaleX(0);
+  transform-origin: left center;
+  animation: wash-wipe 200ms var(--ease-out) forwards;
+}
+@keyframes wash-wipe { to { transform: scaleX(1); } }
+.verdict.pass .check-mark { color: var(--stage-ink, var(--fern)); }
+
+/* wrong: no shake, no red panel — one hairline, drawn under the output */
+.verdict.fail { color: var(--terracotta); padding-left: 0; padding-top: 10px; }
+.verdict.fail::after {
+  content: "";
+  position: absolute;
+  left: 0; top: 0;
+  height: 1.5px;
+  width: 100%;
+  background: var(--terracotta);
+  transform: scaleX(0);
+  transform-origin: left center;
+  animation: wash-wipe 250ms var(--ease-out) forwards;
+}
+
 .verdict svg { flex-shrink: 0; margin-top: 2px; }
+
+/* the hint button warms when an answer misses, as an offer rather than a scold */
+.btn-hint.warm { border-color: var(--terracotta); color: var(--terracotta); }
 .verdict .xp-gain { font-family: var(--mono); font-weight: 500; }
 
 /* ---------- Stage footer nav ---------- */

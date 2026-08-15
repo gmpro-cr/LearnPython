@@ -174,7 +174,6 @@ function badgeSvg(stageIdx, size) {
 const BUG_MINI_SVG = `<svg width="12" height="12" viewBox="-10 -10 20 20" color="currentColor"><g>${typeof BUG_GLYPH !== "undefined" ? BUG_GLYPH : ""}</g></svg>`;
 
 const CHECK_SVG = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8.5l3.2 3L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-const CROSS_SVG = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
 
 /* ------------------------------------------------ header / sidebar ------- */
 
@@ -469,13 +468,21 @@ function showStage(idx) {
   }).join("");
 
   const track = TRACKS.find((t) => idx >= t.from && idx <= t.to);
+  const tone = ILLO.stageInk(idx);
+  main.style.setProperty("--stage-ink", tone.ink);
+  main.style.setProperty("--stage-wash", tone.wash);
   main.innerHTML = `
-    <p class="stage-kicker reveal" style="--index:0">
-      <span class="kicker-strong">Stage ${idx + 1} of ${STAGES.length}</span>
-      <span class="kicker-dot"></span>${track ? track.name + " track" : ""}
-      <span class="kicker-dot"></span>${stage.exercises.length} exercise${stage.exercises.length > 1 ? "s" : ""} · ${stage.exercises.length * XP_PER_EXERCISE} XP
-    </p>
-    <h1 class="stage-title reveal" style="--index:0">${stage.name}</h1>
+    <div class="stage-head reveal" style="--index:0">
+      <div class="stage-head-text">
+        <p class="plate-num">
+          <span class="plate-ink">Plate ${String(idx + 1).padStart(2, "0")}</span>
+          <span class="plate-rule"></span>
+          <span>${track ? track.name : ""} · ${stage.exercises.length} exercise${stage.exercises.length > 1 ? "s" : ""} · ${stage.exercises.length * XP_PER_EXERCISE} XP</span>
+        </p>
+        <h1 class="stage-title">${stage.name}</h1>
+      </div>
+      <div class="stage-vignette">${ILLO.medallion(idx, 60)}</div>
+    </div>
     <div class="lesson-prose reveal" style="--index:1">${introHtml}</div>
     ${exercisesHtml}
     <div class="stage-footer reveal" style="--index:${stage.exercises.length + 2}">
@@ -524,6 +531,7 @@ function showStage(idx) {
   const bugBtn = document.getElementById("to-bug");
   if (bugBtn) bugBtn.addEventListener("click", () => showBugHunt(idx));
 
+  ILLO.observe(main);
   window.scrollTo({ top: 0 });
 }
 
@@ -580,6 +588,7 @@ async function execute(stage, stageIdx, ex, card) {
       card.querySelector(".exercise-status").textContent = "Complete";
     }
     verdict.className = "verdict show pass";
+    card.querySelector(".btn-hint").classList.remove("warm");
     const praise = pick([
       "Clean. That is exactly right.",
       "Correct — the machine obeys.",
@@ -587,9 +596,14 @@ async function execute(stage, stageIdx, ex, card) {
       "That ran perfectly.",
       "Correct, first-class work.",
     ]);
-    verdict.innerHTML = `${CHECK_SVG}<span>${praise}
+    verdict.innerHTML = `${ILLO.check(15)}<span>${praise}
       ${firstTime ? `&nbsp;<span class="xp-gain">+${XP_PER_EXERCISE} XP</span>` : "&nbsp;(already banked)"}
       ${state.streak >= 3 ? `&nbsp;— ${state.streak} correct in a row` : ""}</span>`;
+    const mark = verdict.querySelector(".check-mark");
+    if (mark && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      ILLO.arm(mark);
+      ILLO.draw(mark, { duration: 300, stagger: 0 });
+    }
 
     if (firstTime && stageDone(stage) && !state.badges.includes(stage.id)) {
       state.badges.push(stage.id);
@@ -604,7 +618,10 @@ async function execute(stage, stageIdx, ex, card) {
       : result.error
       ? "Python hit an error — read the message above, fix the line it mentions, and run again."
       : (result.feedback || "Not quite — compare your output with what the task asks for.");
-    verdict.innerHTML = `${CROSS_SVG}<span>${msg}</span>`;
+    /* no shake: a wrong answer is a normal part of learning. A hairline draws
+       under the output and the hint button warms, and that is all. */
+    verdict.innerHTML = `<span>${msg}</span>`;
+    card.querySelector(".btn-hint").classList.add("warm");
   }
 }
 
