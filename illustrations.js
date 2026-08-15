@@ -535,6 +535,123 @@ function leafMark(x, y, len, angleDeg, seed) {
 
 /* ------------------------------------------------ small marks ----------- */
 
+/* ------------------------------------------------ garden defences ------- */
+/* The four Firewall defences. These are SELF-CONTAINED: explicit stroke and
+   fill attributes, no CSS classes and no currentColor, so one string works
+   both inline in the palette and as an Image drawn onto the game canvas. */
+
+function defencePaths(kind) {
+  switch (kind) {
+    /* print() — shows one thing at a time, so: a lantern picking out one pest */
+    case "lantern":
+      return {
+        wash: `M 22 26 L 42 26 L 45 46 L 19 46 Z`,
+        ink: [
+          `M 32 8 L 32 14`,                        // hanging ring
+          `M 26 14 L 38 14`,                       // cap
+          `M 24 14 L 22 26 L 42 26 L 40 14`,       // shoulder
+          `M 22 26 L 19 46 L 45 46 L 42 26`,       // glass body
+          `M 17 46 L 47 46`,                       // base
+          `M 32 30 L 32 42`,                       // flame stem
+          `M 28 36 Q 32 30 36 36 Q 32 42 28 36`,   // flame
+        ],
+        rays: [`M 12 30 L 6 27`, `M 52 30 L 58 27`, `M 12 40 L 6 43`, `M 52 40 L 58 43`],
+      };
+
+    /* for — repeats over everything in range, so: a sprinkler watering the bed */
+    case "sprinkler":
+      return {
+        wash: `M 26 40 L 38 40 L 40 54 L 24 54 Z`,
+        ink: [
+          `M 24 54 L 26 40 L 38 40 L 40 54`,       // post
+          `M 20 54 L 44 54`,                       // foot
+          `M 22 40 L 42 40`,                       // collar
+          `M 32 40 L 32 26`,                       // riser
+          `M 24 26 L 40 26`,                       // head bar
+          `M 26 26 L 26 22`, `M 32 26 L 32 20`, `M 38 26 L 38 22`,
+        ],
+        rays: [
+          `M 20 24 Q 12 18 8 24`,                  // spray arcs
+          `M 44 24 Q 52 18 56 24`,
+          `M 22 18 Q 32 8 42 18`,
+        ],
+      };
+
+    /* if — decides what gets through, so: a gate that holds pests up */
+    case "gate":
+      return {
+        wash: `M 18 24 L 46 24 L 46 50 L 18 50 Z`,
+        ink: [
+          `M 16 50 L 16 22`, `M 48 50 L 48 22`,    // posts
+          `M 14 22 L 50 22`,                       // lintel
+          `M 18 28 L 46 28`, `M 18 38 L 46 38`, `M 18 48 L 46 48`, // rails
+          `M 18 48 L 46 28`, `M 18 28 L 46 48`,    // cross braces
+        ],
+        rays: [`M 10 50 L 54 50`],
+      };
+
+    /* def — defined once, works from a distance, over and over: a scarecrow */
+    default:
+      return {
+        wash: `M 24 24 L 40 24 L 38 44 L 26 44 Z`,
+        ink: [
+          `M 32 44 L 32 56`,                       // stake
+          `M 26 56 L 38 56`,                       // ground
+          `M 14 30 L 50 30`,                       // arms
+          `M 24 24 L 26 44 L 38 44 L 40 24`,       // body
+          `M 32 24 L 32 12`,                       // neck
+          `M 25 12 Q 32 4 39 12 Q 32 18 25 12`,    // head
+          `M 22 10 L 42 10`,                       // hat brim
+          `M 27 10 L 28 5 L 36 5 L 37 10`,         // hat crown
+          `M 14 30 L 11 36`, `M 50 30 L 53 36`,    // straw at the cuffs
+        ],
+        rays: [`M 29 33 L 35 33`, `M 29 38 L 35 38`],
+      };
+  }
+}
+
+/* one string, used inline in the palette and as an Image on the canvas */
+function defenceSvg(kind, ink, opts) {
+  const o = opts || {};
+  const P = defencePaths(kind);
+  const w = o.size || 64;
+  const faded = o.ghost ? ' opacity="0.4"' : "";
+  const body =
+    `<path d="${P.wash}" fill="${ink}" fill-opacity="0.14" stroke="none"/>` +
+    P.ink.map((d) => `<path d="${d}" fill="none" stroke="${ink}" stroke-width="1.6"` +
+      ` stroke-linecap="round" stroke-linejoin="round"/>`).join("") +
+    P.rays.map((d) => `<path d="${d}" fill="none" stroke="${ink}" stroke-width="1.2"` +
+      ` stroke-linecap="round" stroke-opacity="0.55"/>`).join("");
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="${w}" height="${w}"` +
+         ` aria-hidden="true"${faded}>${body}</svg>`;
+}
+
+/* The thing the pests are marching on: the seedling grown in the lesson.
+   health 0..1 — leaves drop off as it is eaten. */
+function seedlingSvg(health, ink) {
+  const h = Math.max(0, Math.min(1, health));
+  const leaves = [
+    { d: "M 32 44 C 18 38 16 24 30 20 C 36 30 40 38 32 44 Z", at: 0.15 },
+    { d: "M 32 40 C 46 34 48 20 34 16 C 28 26 24 34 32 40 Z", at: 0.45 },
+    { d: "M 32 32 C 22 24 24 12 34 8 C 38 18 38 26 32 32 Z", at: 0.75 },
+  ];
+  let out = `<path d="M 32 56 C 31 46 32 34 34 24" fill="none" stroke="${ink}"` +
+            ` stroke-width="1.8" stroke-linecap="round"/>` +
+            `<path d="M 22 56 L 42 56" fill="none" stroke="${ink}" stroke-width="1.6" stroke-linecap="round"/>`;
+  leaves.forEach((L) => {
+    if (h <= L.at) return;
+    out += `<path d="${L.d}" fill="${ink}" fill-opacity="0.16" stroke="${ink}"` +
+           ` stroke-width="1.5" stroke-linejoin="round"/>`;
+  });
+  if (h <= 0.15) {
+    /* stripped bare: a stem and two stubs, so the loss is legible */
+    out += `<path d="M 32 40 L 24 34" fill="none" stroke="${ink}" stroke-width="1.4" stroke-linecap="round"/>` +
+           `<path d="M 33 32 L 40 27" fill="none" stroke="${ink}" stroke-width="1.4" stroke-linecap="round"/>`;
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64"` +
+         ` aria-hidden="true">${out}</svg>`;
+}
+
 /* the tick on a correct answer, drawn rather than stamped */
 function drawCheck(size) {
   return svgWrap("0 0 16 16", ink("M 3 8.4 L 6.3 11.6 L 13 4.6", 0), {
@@ -646,6 +763,8 @@ const ILLO = {
   medallion: drawMedallion,
   medallionInner,
   leafMark,
+  defence: defenceSvg,
+  seedling: seedlingSvg,
   check: drawCheck,
   pressed: drawPressed,
 

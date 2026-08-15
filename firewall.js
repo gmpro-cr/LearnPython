@@ -1,7 +1,9 @@
 // PyQuest — Firewall: tower defense between stages.
-// Bugs march a winding path toward your codebase. Place Python-keyword
-// towers to stop them. Each sector (between stage N and N+1) is a harder
-// wave set; new tower types unlock as you advance through the course.
+// Pests march a winding trail toward the seedling grown in the lesson. Plant
+// garden defences to stop them — each is a drawn object (Lantern, Sprinkler,
+// Gate, Scarecrow) that keeps the Python keyword it came from, so the game
+// stays part of the course. Each sector (between stage N and N+1) is a harder
+// wave set; new defences unlock as you advance.
 
 const FW_XP = 5;
 const FW_GRID_W = 14, FW_GRID_H = 10, FW_CELL = 40;
@@ -11,16 +13,45 @@ const FW_WAYPOINTS = [
   [-1, 2], [3, 2], [3, 7], [7, 7], [7, 1], [11, 1], [11, 5], [14, 5],
 ];
 
+// Each defence is a garden object you can picture, keeping the Python keyword
+// that earned it: the mapping is what makes the Firewall part of the course.
+// Costs, ranges, damage and unlocks are unchanged from the accepted balance.
 const FW_TOWERS = {
-  print: { key: "print",  label: "print()", cost: 50,  range: 95,  dmg: 9,  rate: 0.55, color: "#2B4C7E", bg: "#E1E9F5", unlockSector: 0,
-           blurb: "Reliable single-target zapper." },
-  loop:  { key: "loop",   label: "for",     cost: 80,  range: 75,  dmg: 5,  rate: 0.9,  color: "#2E5E3A", bg: "#E3EEDF", unlockSector: 3, aoe: true,
-           blurb: "Pulses damage to every bug in range." },
-  cond:  { key: "cond",   label: "if",      cost: 60,  range: 85,  dmg: 1,  rate: 0.7,  color: "#A97708", bg: "#FAEDD0", unlockSector: 7, slow: 0.45,
-           blurb: "Filters the stream — slows bugs it hits." },
-  func:  { key: "func",   label: "def",     cost: 120, range: 150, dmg: 42, rate: 1.5,  color: "#B4462A", bg: "#F8E3D8", unlockSector: 11,
-           blurb: "Long-range heavy cannon. Slow, devastating." },
+  print: { key: "print", name: "Lantern",   art: "lantern",   keyword: "print()",
+           cost: 50,  range: 95,  dmg: 9,  rate: 0.55, color: "#2B4C7E", bg: "#E1E9F5", unlockSector: 0,
+           blurb: "Picks out one pest at a time, the way print() shows one thing at a time." },
+  loop:  { key: "loop", name: "Sprinkler",  art: "sprinkler", keyword: "for",
+           cost: 80,  range: 75,  dmg: 5,  rate: 0.9,  color: "#2E5E3A", bg: "#E3EEDF", unlockSector: 3, aoe: true,
+           blurb: "Waters the whole bed at once — a for loop repeats over everything in range." },
+  cond:  { key: "cond", name: "Gate",       art: "gate",      keyword: "if",
+           cost: 60,  range: 85,  dmg: 1,  rate: 0.7,  color: "#A97708", bg: "#FAEDD0", unlockSector: 7, slow: 0.45,
+           blurb: "Decides what gets through and holds the rest up, the way an if decides." },
+  func:  { key: "func", name: "Scarecrow",  art: "scarecrow", keyword: "def",
+           cost: 120, range: 150, dmg: 42, rate: 1.5,  color: "#B4462A", bg: "#F8E3D8", unlockSector: 11,
+           blurb: "Built once, works from a long way off, over and over — like a def you defined." },
 };
+
+/* Defence and seedling drawings, decoded once per sector and cached. The board
+   never waits on them: a missing image falls back to a plain ring. */
+const fwArt = { defence: {}, seedling: {}, ready: false };
+
+function fwLoadImage(svg, into, key) {
+  const img = new Image();
+  img.onload = () => { into[key] = img; if (fw.ctx) fwDraw(); };
+  img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+}
+
+function fwPreloadArt() {
+  if (fwArt.ready) return;
+  fwArt.ready = true;
+  Object.values(FW_TOWERS).forEach((t) => {
+    fwLoadImage(ILLO.defence(t.art, t.color), fwArt.defence, t.key);
+  });
+  /* one seedling per damage step, so leaves drop as it is eaten */
+  for (let s = 0; s <= 10; s++) {
+    fwLoadImage(ILLO.seedling(s / 10, "#2E5E3A"), fwArt.seedling, String(s));
+  }
+}
 
 const fw = {
   sector: 0, running: false, raf: null, lastT: 0, speed: 1,
@@ -93,6 +124,8 @@ function fwLoadSector(i) {
   fw.selectedType = "print";
   fw.selectedTower = null;
   fw.speed = 1;
+  fw.hover = null;
+  fwPreloadArt();
   fwBuildPath();
   fwHud();
   fwDraw();
@@ -210,7 +243,7 @@ function fwHit(b, dmg) {
     const bump = Math.floor(fw.sector / 3) * 3;
     fw.credits += (b.kind === "tank" ? 26 : b.kind === "runner" ? 8 : 12) + bump;
     const [bx, by] = fwPointAt(b.dist);
-    fw.effects.push({ kind: "pop", x: bx, y: by, ttl: 0.3, color: "#B4462A" });
+    fw.effects.push({ kind: "pop", x: bx, y: by, ttl: 0.5, color: "#B4462A" });
   }
 }
 
@@ -295,7 +328,9 @@ function showBugHunt(i) {
     return `<button class="tower-btn ${locked ? "locked" : ""}" data-tower="${t.key}"
       style="--tc:${t.color};--tb:${t.bg}" ${locked ? "disabled" : ""}
       title="${locked ? "Unlocks in Sector " + (t.unlockSector + 1) : t.blurb}">
-      <span class="tower-key">${t.label}</span>
+      <span class="tower-art">${ILLO.defence(t.art, t.color, { size: 38 })}</span>
+      <span class="tower-key">${t.name}</span>
+      <span class="tower-word">${t.keyword}</span>
       <span class="tower-cost">${locked ? "Sector " + (t.unlockSector + 1) : "₵" + t.cost}</span>
     </button>`;
   }).join("");
@@ -304,9 +339,9 @@ function showBugHunt(i) {
     <p class="stage-kicker reveal" style="--index:0">Firewall · between Stage ${i + 1} and Stage ${i + 2}</p>
     <h1 class="stage-title reveal" style="--index:0">Defend Sector ${i + 1}</h1>
     <div class="lesson-prose reveal" style="--index:1">
-      <p>Stage ${i + 1}'s escaped bugs are marching on your codebase. Pick a tower,
-      click an empty tile beside the path to build it, then start the waves.
-      Click a placed tower to <strong>upgrade</strong> or sell it. Kills earn credits;
+      <p>Pests from Stage ${i + 1} are marching on the seedling you grew there. Pick a
+      defence, click an empty bed beside the trail to plant it, then start the waves.
+      Click a planted defence to <strong>upgrade</strong> or sell it. Kills earn credits;
       ${cleared ? "this sector is already secure — replay for a perfect run." : `survive all ${fwSectorWaves(i)} waves to open Stage ${i + 2}.`}</p>
     </div>
     <div class="fw-frame reveal" style="--index:2">
@@ -322,7 +357,7 @@ function showBugHunt(i) {
       <div class="fw-inspect" id="fw-inspect"></div>
     </div>
     <div class="stage-footer reveal" style="--index:3">
-      <span class="muted-note">Towers: print() zaps, for pulses everyone in range, if slows, def hits like a train.</span>
+      <span class="muted-note">Lantern picks off one pest, Sprinkler waters the whole bed, Gate holds them up, Scarecrow hits from far off.</span>
       ${cleared && i + 1 < STAGES.length
         ? `<button class="btn-hint" id="fw-next">Continue to Stage ${i + 2}</button>` : ""}
     </div>`;
@@ -338,11 +373,36 @@ function showBugHunt(i) {
 
   fwLoadSector(i);
 
-  canvas.addEventListener("click", (e) => {
+  const cellFromEvent = (e) => {
     const r = canvas.getBoundingClientRect();
     const x = (e.clientX - r.left) * (FW_GRID_W * FW_CELL / r.width);
     const y = (e.clientY - r.top) * (FW_GRID_H * FW_CELL / r.height);
-    fwCanvasClick(Math.floor(x / FW_CELL), Math.floor(y / FW_CELL));
+    return [Math.floor(x / FW_CELL), Math.floor(y / FW_CELL)];
+  };
+
+  canvas.addEventListener("click", (e) => {
+    const [cx, cy] = cellFromEvent(e);
+    fwCanvasClick(cx, cy);
+  });
+
+  /* Show where a defence would go, and what ground it would cover, before you
+     commit. The rAF loop only runs during a wave, so hovering asks for its own
+     redraw — throttled to one per frame. */
+  let hoverPending = false;
+  canvas.addEventListener("mousemove", (e) => {
+    const [cx, cy] = cellFromEvent(e);
+    const prev = fw.hover;
+    if (prev && prev.cx === cx && prev.cy === cy) return;
+    fw.hover = { cx, cy, ok: fwCanPlant(cx, cy) };
+    if (hoverPending) return;
+    hoverPending = true;
+    requestAnimationFrame(() => { hoverPending = false; fwDraw(); });
+  });
+
+  canvas.addEventListener("mouseleave", () => {
+    if (!fw.hover) return;
+    fw.hover = null;
+    fwDraw();
   });
 
   main.querySelectorAll(".tower-btn:not(.locked)").forEach((b) => {
@@ -373,6 +433,17 @@ function showBugHunt(i) {
   window.scrollTo({ top: 0 });
 }
 
+/* Can the selected defence be planted in this bed? The same rules the click
+   applies, so the hover never promises a placement that then fails. */
+function fwCanPlant(cx, cy) {
+  if (cx < 0 || cx >= FW_GRID_W || cy < 0 || cy >= FW_GRID_H) return false;
+  if (fw.phase === "won" || fw.phase === "lost") return false;
+  if (fw.towers.some((t) => t.cx === cx && t.cy === cy)) return false;
+  if (fw.pathCells.has(cx + "," + cy)) return false;
+  const spec = FW_TOWERS[fw.selectedType];
+  return !!spec && fw.sector >= spec.unlockSector && fw.credits >= spec.cost;
+}
+
 function fwCanvasClick(cx, cy) {
   if (cx < 0 || cx >= FW_GRID_W || cy < 0 || cy >= FW_GRID_H) return;
   const existing = fw.towers.find((t) => t.cx === cx && t.cy === cy);
@@ -397,10 +468,10 @@ function fwHud() {
   const hud = document.getElementById("fw-hud");
   if (!hud) return;
   hud.innerHTML = `
-    <span class="bug-stat">Integrity <strong>${Math.max(0, fw.integrity)}</strong>/10</span>
+    <span class="bug-stat">Seedling <strong>${Math.max(0, fw.integrity)}</strong>/10</span>
     <span class="bug-stat">Credits <strong>₵${fw.credits}</strong></span>
     <span class="bug-stat">Wave <strong>${fw.wave}</strong>/${fw.waves}</span>
-    <span class="bug-best">${state.bugs.best[fw.sector] ? "best integrity " + state.bugs.best[fw.sector] : ""}</span>`;
+    <span class="bug-best">${state.bugs.best[fw.sector] ? "best seedling " + state.bugs.best[fw.sector] : ""}</span>`;
 
   const startBtn = document.getElementById("fw-start");
   if (startBtn) {
@@ -418,7 +489,7 @@ function fwHud() {
       const spec = FW_TOWERS[t.type];
       const up = fwUpgradeCost(t);
       ins.innerHTML = `
-        <span class="fw-inspect-name" style="color:${spec.color}">${spec.label} · level ${t.level}</span>
+        <span class="fw-inspect-name" style="color:${spec.color}">${spec.name} <em>${spec.keyword}</em> · level ${t.level}</span>
         <button class="btn-hint fw-mini" id="fw-upgrade" ${t.level >= 3 || fw.credits < up ? "disabled" : ""}>
           ${t.level >= 3 ? "Max level" : "Upgrade ₵" + up}</button>
         <button class="btn-hint fw-mini" id="fw-sell">Sell ₵${Math.round(t.spent * 0.5)}</button>`;
@@ -435,7 +506,7 @@ function fwHud() {
     } else {
       const spec = FW_TOWERS[fw.selectedType];
       ins.innerHTML = spec
-        ? `<span class="fw-inspect-name" style="color:${spec.color}">${spec.label}</span>
+        ? `<span class="fw-inspect-name" style="color:${spec.color}">${spec.name} <em>${spec.keyword}</em></span>
            <span class="fw-inspect-blurb">${spec.blurb} Range ${spec.range} · damage ${spec.dmg} · ₵${spec.cost}</span>`
         : "";
     }
@@ -527,12 +598,46 @@ function fwDraw() {
   c.stroke();
   c.setLineDash([]);
 
-  // the codebase to defend (path end)
+  // what the pests are marching on: the seedling grown in the lesson
   const [ex, ey] = fw.pathPx[fw.pathPx.length - 1];
-  c.fillStyle = "#171309";
-  c.font = "600 11px 'Geist Mono', monospace";
-  c.textAlign = "center";
-  c.fillText("{ code }", ex - 18, ey + 4);
+  const step = String(Math.max(0, Math.min(10, Math.round(fw.integrity))));
+  const seed = fwArt.seedling[step];
+  if (seed) {
+    /* the last waypoint sits just off the board, so keep the seedling inside it */
+    const sx = Math.min(ex - 26, FW_GRID_W * FW_CELL - 56);
+    c.drawImage(seed, sx, ey - 30, 52, 52);
+  } else {
+    c.fillStyle = "#2E5E3A";
+    c.font = "600 11px 'Geist Mono', monospace";
+    c.textAlign = "center";
+    c.fillText("seedling", ex - 20, ey + 4);
+  }
+
+  // the bed the hovered defence would go in, and the ground it would cover
+  if (fw.hover && fw.phase !== "lost") {
+    const { cx, cy, ok } = fw.hover;
+    const px = cx * FW_CELL, py = cy * FW_CELL;
+    c.save();
+    c.fillStyle = ok ? "rgba(46,94,58,0.10)" : "rgba(180,70,42,0.10)";
+    c.fillRect(px, py, FW_CELL, FW_CELL);
+    c.strokeStyle = ok ? "rgba(46,94,58,0.55)" : "rgba(180,70,42,0.5)";
+    c.lineWidth = 1.2;
+    c.setLineDash([4, 4]);
+    c.strokeRect(px + 1, py + 1, FW_CELL - 2, FW_CELL - 2);
+    c.setLineDash([]);
+    const spec = FW_TOWERS[fw.selectedType];
+    if (ok && spec) {
+      const gx = px + FW_CELL / 2, gy = py + FW_CELL / 2;
+      c.strokeStyle = spec.color + "44";
+      c.fillStyle = spec.color + "0E";
+      c.beginPath();
+      c.arc(gx, gy, spec.range, 0, Math.PI * 2);
+      c.fill(); c.stroke();
+      const art = fwArt.defence[spec.key];
+      if (art) { c.globalAlpha = 0.45; c.drawImage(art, gx - 17, gy - 19, 34, 34); c.globalAlpha = 1; }
+    }
+    c.restore();
+  }
 
   // tower range preview for selection
   const sel = fw.selectedTower;
@@ -545,23 +650,37 @@ function fwDraw() {
     c.fill(); c.stroke();
   }
 
-  // towers
+  // the defences, drawn — and upgrades read as growth rather than pips
   for (const t of fw.towers) {
     const spec = FW_TOWERS[t.type];
+    const grow = 0.86 + (t.level - 1) * 0.15;      // level 1 → 3 gets visibly bigger
+    const size = 34 * grow;
+
+    // the bed it stands in
     c.fillStyle = spec.bg;
-    c.strokeStyle = spec.color;
-    c.lineWidth = t === fw.selectedTower ? 2.4 : 1.5;
+    c.strokeStyle = t === fw.selectedTower ? spec.color : spec.color + "66";
+    c.lineWidth = t === fw.selectedTower ? 2 : 1.2;
     c.beginPath();
-    c.arc(t.x, t.y, 15, 0, Math.PI * 2);
+    c.arc(t.x, t.y, 17, 0, Math.PI * 2);
     c.fill(); c.stroke();
-    c.fillStyle = spec.color;
-    c.font = "600 10px 'Geist Mono', monospace";
-    c.textAlign = "center";
-    c.fillText(spec.label.replace("()", ""), t.x, t.y + 3.5);
-    for (let l = 0; l < t.level - 1; l++) {
+
+    // a full-grown defence earns a second ring
+    if (t.level >= 3) {
+      c.strokeStyle = spec.color + "55";
+      c.lineWidth = 1;
       c.beginPath();
-      c.arc(t.x - 6 + l * 6, t.y + 10.5, 1.8, 0, Math.PI * 2);
-      c.fill();
+      c.arc(t.x, t.y, 20.5, 0, Math.PI * 2);
+      c.stroke();
+    }
+
+    const art = fwArt.defence[t.type];
+    if (art) {
+      c.drawImage(art, t.x - size / 2, t.y - size / 2 - 2, size, size);
+    } else {
+      c.fillStyle = spec.color;
+      c.font = "600 9px 'Geist Mono', monospace";
+      c.textAlign = "center";
+      c.fillText(spec.name, t.x, t.y + 3.5);
     }
   }
 
@@ -598,10 +717,25 @@ function fwDraw() {
       c.beginPath(); c.arc(e.x, e.y, e.r * (1 - e.ttl / 0.25 * 0.3), 0, Math.PI * 2); c.stroke();
       c.globalAlpha = 1;
     } else if (e.kind === "pop") {
+      // a stopped pest is pinned as a specimen, then fades from the board
+      const f = Math.max(0, e.ttl / 0.5);
+      c.save();
+      c.globalAlpha = f;
+      c.strokeStyle = e.color;
       c.fillStyle = e.color;
-      c.globalAlpha = e.ttl / 0.3;
-      c.beginPath(); c.arc(e.x, e.y, 6 * (1.6 - e.ttl / 0.3), 0, Math.PI * 2); c.fill();
-      c.globalAlpha = 1;
+      c.lineWidth = 1.2;
+      c.beginPath();                                  // the pin
+      c.moveTo(e.x + 7, e.y - 9);
+      c.lineTo(e.x, e.y);
+      c.stroke();
+      c.beginPath();                                  // its head
+      c.arc(e.x + 7.6, e.y - 9.8, 2, 0, Math.PI * 2);
+      c.fill();
+      c.globalAlpha = f * 0.5;                        // the specimen beneath it
+      c.beginPath();
+      c.ellipse(e.x, e.y + 1, 5, 6.5, 0, 0, Math.PI * 2);
+      c.stroke();
+      c.restore();
     }
   }
 

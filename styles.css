@@ -1205,35 +1205,51 @@ kbd {
   border-top: 1px solid var(--border);
   background: var(--bone);
 }
-.fw-palette { display: flex; gap: 8px; flex-wrap: wrap; }
+/* each defence is a card you pick by its drawing, not by a keyword */
+.fw-palette { display: flex; gap: 10px; flex-wrap: wrap; }
 .tower-btn {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 1px;
-  min-width: 66px;
-  padding: 7px 10px;
+  min-width: 88px;
+  padding: 9px 12px 8px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--surface);
   cursor: pointer;
-  transition: box-shadow 200ms var(--ease-out), border-color 200ms var(--ease-out);
+  transition: box-shadow 200ms var(--ease-out), border-color 200ms var(--ease-out),
+              transform 160ms var(--ease-out);
 }
-.tower-btn:hover:not(.locked) { box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+.tower-btn:hover:not(.locked) { box-shadow: 0 2px 10px rgba(23,19,9,0.06); transform: translateY(-1px); }
 .tower-btn.selected { border-color: var(--tc); background: var(--tb); }
-.tower-btn.locked { opacity: 0.45; cursor: default; }
-.tower-btn.poor .tower-cost { color: var(--pastel-red-ink); }
+.tower-btn.locked { opacity: 0.5; cursor: default; }
+.tower-btn.locked .tower-art { filter: grayscale(1); }
+.tower-btn.poor .tower-cost { color: var(--terracotta); }
+
+.tower-art { display: block; height: 38px; margin-bottom: 3px; }
+.tower-art svg { display: block; }
+
 .tower-key {
-  font-family: var(--mono);
+  font-family: var(--sans);
   font-size: 12.5px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--tc);
+}
+/* the Python keyword the defence came from, kept as its second name */
+.tower-word {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
 }
 .tower-cost {
   font-family: var(--mono);
   font-size: 10.5px;
   color: var(--muted);
+  margin-top: 2px;
 }
+
+.fw-inspect-name em { font-family: var(--mono); font-style: normal; opacity: 0.7; font-size: 0.9em; }
 .fw-actions { display: flex; align-items: center; gap: 10px; }
 
 .fw-inspect {
