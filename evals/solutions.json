@@ -1,0 +1,338 @@
+{
+ "hello-1": {
+  "solution": "print(\"Hello, World!\")\n",
+  "rejects": [
+   "print(\"hello world\")\n",
+   "print(\"Goodbye\")\n"
+  ]
+ },
+ "hello-2": {
+  "solution": "print(\"My name is Gaurav\")\n"
+ },
+ "hello-3": {
+  "solution": "print(\"Pune\")\nprint(\"Poha\")\nprint(\"A price tracker\")\n",
+  "rejects": [
+   "print(\"Pune\")\nprint(\"Poha\")\n"
+  ]
+ },
+ "var-1": {
+  "solution": "age = 31\nprint(age)\n",
+  "rejects": [
+   "age = \"31\"\nprint(age)\n"
+  ]
+ },
+ "var-2": {
+  "solution": "total = 7 * 6\nprint(total)\n",
+  "rejects": [
+   "total = 42\nprint(total)\n"
+  ]
+ },
+ "var-3": {
+  "solution": "score = 10\nscore = score + 5\nprint(score)\n",
+  "rejects": [
+   "score = 10\nscore = 15\nprint(score)\n"
+  ]
+ },
+ "str-1": {
+  "solution": "name = \"Asha\"\nprint(f\"Hello, {name}!\")\n",
+  "rejects": [
+   "name = \"Asha\"\nprint(\"Hello, Asha!\")\n"
+  ]
+ },
+ "str-2": {
+  "solution": "quiet = \"python is fun\"\nshout = quiet.upper()\nprint(shout)\n",
+  "rejects": [
+   "quiet = \"python is fun\"\nshout = \"PYTHON IS FUN\"\nprint(shout)\n"
+  ]
+ },
+ "str-3": {
+  "solution": "word = \"beautiful\"\ncount = len(word)\nprint(count)\n",
+  "rejects": [
+   "word = \"beautiful\"\ncount = 9\nprint(count)\n"
+  ]
+ },
+ "if-1": {
+  "solution": "temperature = 35\nif temperature > 30:\n    print(\"Hot\")\nelse:\n    print(\"Pleasant\")\n",
+  "rejects": [
+   "temperature = 35\nprint(\"Pleasant\")\n"
+  ]
+ },
+ "if-2": {
+  "solution": "number = 7\nif number % 2 == 0:\n    print(\"even\")\nelse:\n    print(\"odd\")\n",
+  "rejects": [
+   "number = 7\nprint(\"odd\")\n"
+  ]
+ },
+ "if-3": {
+  "solution": "marks = 91\nif marks >= 90:\n    print(\"A\")\nelif marks >= 75:\n    print(\"B\")\nelse:\n    print(\"C\")\n",
+  "rejects": [
+   "marks = 91\nif marks >= 90:\n    print(\"B\")\nelif marks >= 75:\n    print(\"A\")\nelse:\n    print(\"C\")\n"
+  ]
+ },
+ "loop-1": {
+  "solution": "for i in range(5):\n    print(i)\n",
+  "rejects": [
+   "print(range(5))\n",
+   "for i in range(1, 6):\n    print(i)\n"
+  ]
+ },
+ "loop-2": {
+  "solution": "snacks = [\"samosa\", \"vada pav\", \"jalebi\"]\nfor snack in snacks:\n    print(snack)\n",
+  "rejects": [
+   "snacks = [\"samosa\", \"vada pav\", \"jalebi\"]\nprint(snacks)\n"
+  ]
+ },
+ "loop-3": {
+  "solution": "total = 0\nfor n in range(1, 11):\n    total = total + n\nprint(total)\n",
+  "rejects": [
+   "total = 55\nprint(total)\n"
+  ]
+ },
+ "list-1": {
+  "solution": "colors = [\"red\", \"green\", \"blue\"]\nprint(colors[0])\n",
+  "rejects": [
+   "colors = [\"red\", \"green\"]\nprint(colors[0])\n"
+  ]
+ },
+ "list-2": {
+  "solution": "guests = [\"Ravi\", \"Meera\"]\nguests.append(\"Anita\")\nprint(guests)\n",
+  "rejects": [
+   "guests = [\"Ravi\", \"Meera\", \"Anita\"]\nprint(guests)\n"
+  ]
+ },
+ "list-3": {
+  "solution": "vips = [\"Arjun\", \"Priya\", \"Dev\"]\nif \"Priya\" in vips:\n    print(\"welcome\")\nelse:\n    print(\"sorry\")\n",
+  "rejects": [
+   "vips = [\"Arjun\", \"Priya\", \"Dev\"]\nprint(\"sorry\")\n"
+  ]
+ },
+ "dict-1": {
+  "solution": "profile = {\"name\": \"Gaurav\", \"city\": \"Pune\"}\nprint(profile)\n",
+  "rejects": [
+   "profile = {\"name\": \"Gaurav\"}\nprint(profile)\n"
+  ]
+ },
+ "dict-2": {
+  "solution": "menu = {\"idli\": 30, \"dosa\": 50, \"uttapam\": 60}\nprint(menu[\"dosa\"])\n",
+  "rejects": [
+   "menu = {\"idli\": 30, \"dosa\": 50, \"uttapam\": 60}\nprint(50)\n"
+  ]
+ },
+ "dict-3": {
+  "solution": "menu = {\"idli\": 30, \"dosa\": 50}\nmenu[\"filter coffee\"] = 25\nprint(menu)\n",
+  "rejects": [
+   "menu = {\"filter coffee\": 25}\nprint(menu)\n"
+  ]
+ },
+ "fn-1": {
+  "solution": "def greet(name):\n    return f\"Hello, {name}!\"\n\nprint(greet(\"Ada\"))\n",
+  "rejects": [
+   "def greet(name):\n    return \"Hello, Ada!\"\n\nprint(greet(\"Ada\"))\n"
+  ]
+ },
+ "fn-2": {
+  "solution": "def square(n):\n    return n * n\n\nprint(square(4))\n",
+  "rejects": [
+   "def square(n):\n    return 16\n\nprint(square(4))\n"
+  ]
+ },
+ "fn-3": {
+  "solution": "def power(base, exp=2):\n    return base ** exp\n\nprint(power(3))\nprint(power(2, 3))\n",
+  "rejects": [
+   "def power(base, exp):\n    return base ** exp\n\nprint(power(3, 2))\n"
+  ]
+ },
+ "cap-1": {
+  "solution": "menu = {\"chai\": 15, \"samosa\": 20, \"jalebi\": 40, \"filter coffee\": 30}\norder = [\"chai\", \"samosa\", \"jalebi\", \"chai\", \"chai\"]\n\ndef bill(menu, order):\n    total = 0\n    for item in order:\n        total = total + menu[item]\n    return total\n\nprint(bill(menu, order))\n",
+  "rejects": [
+   "menu = {\"chai\": 15}\norder = [\"chai\"]\n\ndef bill(menu, order):\n    return 105\n\nprint(bill(menu, order))\n"
+  ]
+ },
+ "slice-1": {
+  "solution": "word = \"programming\"\nfirst = word[0]\nlast = word[-1]\nprint(first)\nprint(last)\n",
+  "rejects": [
+   "word = \"programming\"\nfirst = word[0]\nlast = word[10]\nprint(first)\nprint(last)\n"
+  ]
+ },
+ "slice-2": {
+  "solution": "word = \"programming\"\nmiddle = word[3:7]\nprint(middle)\n",
+  "rejects": [
+   "word = \"programming\"\nmiddle = \"gram\"\nprint(middle)\n"
+  ]
+ },
+ "slice-3": {
+  "solution": "word = \"programming\"\nrev = word[::-1]\nprint(rev)\n",
+  "rejects": [
+   "word = \"programming\"\nrev = \"\".join(reversed(word))\nprint(rev)\n"
+  ]
+ },
+ "while-1": {
+  "solution": "count = 5\nwhile count > 0:\n    print(count)\n    count = count - 1\n",
+  "rejects": [
+   "for count in range(5, 0, -1):\n    print(count)\n"
+  ]
+ },
+ "while-2": {
+  "solution": "age = 25\nhas_id = True\nif age >= 18 and has_id:\n    print(\"entry allowed\")\nelse:\n    print(\"no entry\")\n",
+  "rejects": [
+   "age = 25\nhas_id = True\nif age >= 18:\n    print(\"entry allowed\")\n"
+  ]
+ },
+ "while-3": {
+  "solution": "nums = [12, 45, 230, 99, 501]\nfor n in nums:\n    if n > 100:\n        print(n)\n        break\n",
+  "rejects": [
+   "nums = [12, 45, 230, 99, 501]\nfor n in nums:\n    if n > 100:\n        print(n)\n"
+  ]
+ },
+ "comp-1": {
+  "solution": "squares = [n * n for n in range(1, 6)]\nprint(squares)\n",
+  "rejects": [
+   "squares = []\nfor n in range(1, 6):\n    squares.append(n * n)\nprint(squares)\n"
+  ]
+ },
+ "comp-2": {
+  "solution": "evens = [n for n in range(20) if n % 2 == 0]\nprint(evens)\n",
+  "rejects": [
+   "evens = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18]\nprint(evens)\n"
+  ]
+ },
+ "comp-3": {
+  "solution": "words = [\"chai\", \"samosa\"]\nlengths = {w: len(w) for w in words}\nprint(lengths)\n",
+  "rejects": [
+   "lengths = {\"chai\": 4, \"samosa\": 6}\nprint(lengths)\n"
+  ]
+ },
+ "err-1": {
+  "solution": "try:\n    print(10 / 0)\nexcept ZeroDivisionError:\n    print(\"cannot divide by zero\")\n",
+  "rejects": [
+   "print(\"cannot divide by zero\")\n"
+  ]
+ },
+ "err-2": {
+  "solution": "text = \"abc\"\ntry:\n    number = int(text)\nexcept ValueError:\n    print(\"not a number\")\n",
+  "rejects": [
+   "text = \"abc\"\ntry:\n    number = int(text)\nexcept:\n    print(\"not a number\")\n"
+  ]
+ },
+ "err-3": {
+  "solution": "def withdraw(balance, amount):\n    if amount > balance:\n        raise ValueError(\"insufficient funds\")\n    return balance - amount\n\nprint(withdraw(100, 30))\n",
+  "rejects": [
+   "def withdraw(balance, amount):\n    return balance - amount\n\nprint(withdraw(100, 30))\n"
+  ]
+ },
+ "tup-1": {
+  "solution": "point = (3, 4)\nx, y = point\nprint(x)\nprint(y)\n",
+  "rejects": [
+   "point = (3, 4)\nx = point[0]\ny = point[1]\nprint(x)\nprint(y)\n"
+  ]
+ },
+ "tup-2": {
+  "solution": "visitors = [\"Ravi\", \"Meera\", \"Ravi\", \"Dev\", \"Meera\"]\nunique = set(visitors)\nprint(len(unique))\n",
+  "rejects": [
+   "visitors = [\"Ravi\", \"Meera\", \"Ravi\", \"Dev\", \"Meera\"]\nunique = [\"Ravi\", \"Meera\", \"Dev\"]\nprint(len(unique))\n"
+  ]
+ },
+ "tup-3": {
+  "solution": "a = 1\nb = 2\na, b = b, a\nprint(a)\nprint(b)\n",
+  "rejects": [
+   "a = 1\nb = 2\ntemp = a\na = b\nb = temp\nprint(a)\nprint(b)\n"
+  ]
+ },
+ "cls-1": {
+  "solution": "class Dog:\n    def __init__(self, name):\n        self.name = name\n\n    def bark(self):\n        return f\"{self.name} says woof\"\n\ndog = Dog(\"Rex\")\nprint(dog.bark())\n",
+  "rejects": [
+   "class Dog:\n    def __init__(self, name):\n        self.name = name\n\n    def bark(self):\n        return \"Rex says woof\"\n\nprint(Dog(\"Rex\").bark())\n"
+  ]
+ },
+ "cls-2": {
+  "solution": "class Counter:\n    def __init__(self):\n        self.count = 0\n\n    def increment(self):\n        self.count = self.count + 1\n\ncounter = Counter()\ncounter.increment()\ncounter.increment()\ncounter.increment()\nprint(counter.count)\n",
+  "rejects": [
+   "class Counter:\n    def __init__(self):\n        self.count = 0\n\n    def increment(self):\n        self.count = self.count + 2\n\ncounter = Counter()\ncounter.increment()\nprint(3)\n"
+  ]
+ },
+ "cls-3": {
+  "solution": "class Book:\n    def __init__(self, title, author):\n        self.title = title\n        self.author = author\n\n    def __str__(self):\n        return f\"{self.title} by {self.author}\"\n\nprint(Book(\"Dune\", \"Herbert\"))\n",
+  "rejects": [
+   "class Book:\n    def __init__(self, title, author):\n        self.title = title\n        self.author = author\n\nprint(Book(\"Dune\", \"Herbert\").title)\n"
+  ]
+ },
+ "inh-1": {
+  "solution": "class Animal:\n    def speak(self):\n        return \"...\"\n\nclass Cat(Animal):\n    def speak(self):\n        return \"meow\"\n\nprint(Cat().speak())\n",
+  "rejects": [
+   "class Animal:\n    def speak(self):\n        return \"...\"\n\nclass Cat:\n    def speak(self):\n        return \"meow\"\n\nprint(Cat().speak())\n"
+  ]
+ },
+ "inh-2": {
+  "solution": "class Employee:\n    def __init__(self, name):\n        self.name = name\n\nclass Manager(Employee):\n    def __init__(self, name, team):\n        super().__init__(name)\n        self.team = team\n\nmanager = Manager(\"Asha\", \"Data\")\nprint(manager.name)\nprint(manager.team)\n",
+  "rejects": [
+   "class Employee:\n    def __init__(self, name):\n        self.name = name\n\nclass Manager(Employee):\n    def __init__(self, name, team):\n        self.name = name\n        self.team = team\n\nmanager = Manager(\"Asha\", \"Data\")\nprint(manager.name)\n"
+  ]
+ },
+ "inh-3": {
+  "solution": "class Dog:\n    def speak(self):\n        return \"woof\"\n\nclass Cat:\n    def speak(self):\n        return \"meow\"\n\nanimals = [Dog(), Cat()]\nfor animal in animals:\n    print(animal.speak())\n",
+  "rejects": [
+   "class Dog:\n    def speak(self):\n        return \"woof\"\n\nclass Cat:\n    def speak(self):\n        return \"meow\"\n\nprint(Dog().speak())\nprint(Cat().speak())\n"
+  ]
+ },
+ "fun-1": {
+  "solution": "double = lambda n: n * 2\nprint(double(5))\n",
+  "rejects": [
+   "def double(n):\n    return n * 2\n\nprint(double(5))\n"
+  ]
+ },
+ "fun-2": {
+  "solution": "items = [(\"jalebi\", 40), (\"chai\", 15), (\"samosa\", 20)]\ncheapest_first = sorted(items, key=lambda item: item[1])\nprint(cheapest_first)\n",
+  "rejects": [
+   "items = [(\"jalebi\", 40), (\"chai\", 15), (\"samosa\", 20)]\ncheapest_first = [(\"chai\", 15), (\"samosa\", 20), (\"jalebi\", 40)]\nprint(cheapest_first)\n"
+  ]
+ },
+ "fun-3": {
+  "solution": "def total(*args):\n    return sum(args)\n\nprint(total(1, 2, 3))\n",
+  "rejects": [
+   "def total(a, b, c):\n    return a + b + c\n\nprint(total(1, 2, 3))\n"
+  ]
+ },
+ "gen-1": {
+  "solution": "def countdown(n):\n    while n > 0:\n        yield n\n        n = n - 1\n\nprint(list(countdown(3)))\n",
+  "rejects": [
+   "def countdown(n):\n    return list(range(n, 0, -1))\n\nprint(countdown(3))\n"
+  ]
+ },
+ "gen-2": {
+  "solution": "squares_gen = (n * n for n in range(4))\n",
+  "rejects": [
+   "squares_gen = [n * n for n in range(4)]\n",
+   "squares_gen = (n * n for n in range(4))\nprint(list(squares_gen))\n"
+  ]
+ },
+ "gen-3": {
+  "solution": "def fib():\n    a, b = 0, 1\n    while True:\n        yield a\n        a, b = b, a + b\n\nf = fib()\nprint([next(f) for _ in range(6)])\n",
+  "rejects": [
+   "def fib():\n    for n in [0, 1, 1, 2, 3, 5]:\n        yield n\n\nprint(list(fib()))\n"
+  ]
+ },
+ "dec-1": {
+  "solution": "def make_multiplier(k):\n    def inner(n):\n        return n * k\n    return inner\n\ntriple = make_multiplier(3)\nprint(triple(4))\n",
+  "rejects": [
+   "def make_multiplier(k):\n    return lambda n: n * 3\n\ntriple = make_multiplier(3)\nprint(triple(4))\n"
+  ]
+ },
+ "dec-2": {
+  "solution": "def shout(func):\n    def wrapper():\n        return func().upper()\n    return wrapper\n\n@shout\ndef greet():\n    return \"hello\"\n\nprint(greet())\n",
+  "rejects": [
+   "def shout(func):\n    def wrapper():\n        return func().upper()\n    return wrapper\n\ndef greet():\n    return \"HELLO\"\n\nprint(greet())\n"
+  ]
+ },
+ "dec-3": {
+  "solution": "def log(func):\n    def wrapper(*args):\n        print(\"calling\")\n        return func(*args)\n    return wrapper\n\n@log\ndef add(a, b):\n    return a + b\n\nprint(add(2, 3))\n",
+  "rejects": [
+   "def log(func):\n    def wrapper(*args):\n        print(\"calling\")\n        func(*args)\n    return wrapper\n\n@log\ndef add(a, b):\n    return a + b\n\nprint(add(2, 3))\n"
+  ]
+ },
+ "master-1": {
+  "solution": "class BankAccount:\n    def __init__(self, owner):\n        self.owner = owner\n        self.balance = 0\n        self.history = []\n\n    def deposit(self, amount):\n        self.balance = self.balance + amount\n        self.history.append((\"deposit\", amount))\n\n    def withdraw(self, amount):\n        if amount > self.balance:\n            raise ValueError(\"insufficient funds\")\n        self.balance = self.balance - amount\n        self.history.append((\"withdraw\", amount))\n\nacct = BankAccount(\"Gaurav\")\nacct.deposit(500)\nacct.withdraw(200)\nprint(acct.balance)\n",
+  "rejects": [
+   "class BankAccount:\n    def __init__(self, owner):\n        self.owner = owner\n        self.balance = 0\n        self.history = []\n\n    def deposit(self, amount):\n        self.balance = self.balance + amount\n        self.history.append((\"deposit\", amount))\n\n    def withdraw(self, amount):\n        self.balance = self.balance - amount\n        self.history.append((\"withdraw\", amount))\n\nacct = BankAccount(\"Gaurav\")\nacct.deposit(500)\nacct.withdraw(200)\nprint(acct.balance)\n"
+  ]
+ }
+}

@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PyQuest evals — real Pyodide</title>
+  <link href="https://cdn.jsdelivr.net/npm/@fontsource/geist-sans@5.1.0/index.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/@fontsource/geist-mono@5.1.0/index.css" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #FBF7ED; --surface: #FFFDF7; --ink: #171309; --muted: #756D5D;
+      --border: #E3D9C2; --fern: #2E5E3A; --terracotta: #B4462A; --amber: #A97708;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Geist Sans', system-ui, sans-serif;
+      background: var(--bg); color: var(--ink);
+      padding: 40px 32px 80px; line-height: 1.5;
+    }
+    .wrap { max-width: 900px; margin: 0 auto; }
+    h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+    .lede { color: var(--muted); font-size: 14px; margin: 8px 0 24px; max-width: 68ch; }
+    .bar {
+      display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+      padding: 14px 18px; border: 1px solid var(--border); border-radius: 10px;
+      background: var(--surface); margin-bottom: 22px; position: sticky; top: 12px;
+    }
+    button {
+      font: 600 13px 'Geist Sans', sans-serif; background: var(--ink); color: #FFFDF7;
+      border: 0; border-radius: 6px; padding: 9px 20px; cursor: pointer;
+    }
+    button:disabled { background: #C9BC9F; cursor: default; }
+    .stat { font-family: 'Geist Mono', monospace; font-size: 12.5px; color: var(--muted); }
+    .stat strong { color: var(--ink); font-weight: 500; }
+    .stat.bad strong { color: var(--terracotta); }
+    .stat.good strong { color: var(--fern); }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th {
+      text-align: left; font-family: 'Geist Mono', monospace; font-size: 10.5px;
+      text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted);
+      font-weight: 500; padding: 8px 10px; border-bottom: 1px solid var(--border);
+    }
+    td { padding: 7px 10px; border-bottom: 1px solid rgba(227,217,194,0.5); vertical-align: top; }
+    td.id { font-family: 'Geist Mono', monospace; font-size: 12px; white-space: nowrap; }
+    td.res { font-family: 'Geist Mono', monospace; font-size: 12px; white-space: nowrap; }
+    tr.pass td.res { color: var(--fern); }
+    tr.fail td.res { color: var(--terracotta); }
+    tr.fail { background: rgba(180,70,42,0.05); }
+    .note { color: var(--muted); font-size: 12.5px; }
+    .stage-row td {
+      font-family: 'Geist Mono', monospace; font-size: 10.5px; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--muted); padding-top: 18px; border-bottom: 0;
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>PyQuest evals — against real Pyodide</h1>
+  <p class="lede">
+    The same reference solutions <code>evals/run.py</code> uses, run through the site's own
+    <code>worker.js</code> and the real Pyodide build learners get. run.py uses CPython, so this
+    page is the fidelity check: anything that passes there and fails here is a difference between
+    CPython and Pyodide, and the exercise needs looking at.
+    Serve the repo root and open <code>/evals/evals.html</code>.
+  </p>
+
+  <div class="bar">
+    <button id="run" disabled>Booting Python…</button>
+    <span class="stat">exercises <strong id="s-done">0</strong>/<strong id="s-total">56</strong></span>
+    <span class="stat good">passed <strong id="s-pass">0</strong></span>
+    <span class="stat bad">failed <strong id="s-fail">0</strong></span>
+    <span class="stat" id="s-note"></span>
+  </div>
+
+  <table>
+    <thead>
+      <tr><th style="width:130px">exercise</th><th style="width:150px">result</th><th>detail</th></tr>
+    </thead>
+    <tbody id="rows"></tbody>
+  </table>
+</div>
+
+<script src="../lessons.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+let worker = null, ready = false, seq = 0;
+const pending = new Map();
+let solutions = null;
+
+function boot() {
+  // worker.js resolves its Pyodide CDN import itself; it lives one level up
+  worker = new Worker("../worker.js");
+  worker.onmessage = (e) => {
+    const msg = e.data;
+    if (msg.type === "ready") {
+      ready = true;
+      $("run").disabled = false;
+      $("run").textContent = "Run all evals";
+    } else if (msg.type === "boot-error") {
+      $("run").textContent = "Engine failed to boot";
+      $("s-note").textContent = "check your connection — Pyodide loads from a CDN";
+    } else if (msg.type === "result") {
+      const p = pending.get(msg.id);
+      if (p) { pending.delete(msg.id); p(JSON.parse(msg.raw)); }
+    }
+  };
+}
+
+function run(code, check) {
+  return new Promise((resolve) => {
+    const id = ++seq;
+    pending.set(id, resolve);
+    worker.postMessage({ type: "run", id, code, check });
+  });
+}
+
+function row(cls, id, result, detail) {
+  const tr = document.createElement("tr");
+  tr.className = cls;
+  tr.innerHTML =
+    `<td class="id">${id}</td><td class="res">${result}</td><td class="note">${detail}</td>`;
+  $("rows").appendChild(tr);
+}
+
+const EMPTY = "# a learner who has written nothing yet\n";
+
+async function runAll() {
+  $("run").disabled = true;
+  $("rows").innerHTML = "";
+  let done = 0, pass = 0, fail = 0;
+
+  for (const stage of STAGES) {
+    const head = document.createElement("tr");
+    head.className = "stage-row";
+    head.innerHTML = `<td colspan="3">${stage.name}</td>`;
+    $("rows").appendChild(head);
+
+    for (const ex of stage.exercises) {
+      const entry = solutions[ex.id];
+      if (!entry) {
+        fail++; row("fail", ex.id, "no solution", "missing from solutions.json");
+      } else {
+        // the reference solution must pass
+        const r = await run(entry.solution, ex.check);
+        if (r.passed) { pass++; row("pass", ex.id, "solution passes", ""); }
+        else {
+          fail++;
+          row("fail", ex.id, "solution REJECTED",
+              r.error ? "code raised: " + r.error : r.feedback);
+        }
+
+        // an empty program must not
+        const empty = await run(EMPTY, ex.check);
+        if (!empty.passed) { pass++; }
+        else { fail++; row("fail", ex.id, "empty passes", "the check accepts a learner who wrote nothing"); }
+
+        // and neither may any known-wrong answer
+        for (let i = 0; i < (entry.rejects || []).length; i++) {
+          const bad = await run(entry.rejects[i], ex.check);
+          if (!bad.passed) { pass++; }
+          else {
+            fail++;
+            row("fail", ex.id, `wrong answer ${i + 1} passes`,
+                entry.rejects[i].trim().split("\n")[0]);
+          }
+        }
+      }
+      done++;
+      $("s-done").textContent = done;
+      $("s-pass").textContent = pass;
+      $("s-fail").textContent = fail;
+    }
+  }
+
+  $("run").disabled = false;
+  $("s-note").textContent = fail
+    ? "failures above — fix the exercise, not the eval"
+    : "everything green against real Pyodide";
+}
+
+fetch("solutions.json")
+  .then((r) => r.json())
+  .then((s) => {
+    solutions = s;
+    $("s-total").textContent = STAGES.reduce((n, st) => n + st.exercises.length, 0);
+    boot();
+  })
+  .catch(() => { $("s-note").textContent = "could not load solutions.json — serve the repo over http"; });
+
+$("run").addEventListener("click", runAll);
+</script>
+</body>
+</html>

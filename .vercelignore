@@ -1,0 +1,4 @@
+# Dev-only. evals/solutions.json is a complete answer key for all 56 exercises —
+# it belongs in the repo, not one click away from the live course.
+evals/
+docs/
