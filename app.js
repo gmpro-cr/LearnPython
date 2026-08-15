@@ -317,6 +317,33 @@ function growVine() {
 
 
 
+/* the three chapter markers: one plate per track, with what it actually covers */
+const TRACK_BLURBS = {
+  Foundations: "Your first print(), then variables, strings, decisions, loops, lists, dictionaries and functions — ending in a working chai shop you wrote yourself.",
+  Intermediate: "Slices, while loops, comprehensions, error handling and unpacking: the tools that turn a script into a program that survives contact with real input.",
+  Expert: "Classes, inheritance, functional Python, generators and decorators, finishing with a bank that keeps its own books.",
+};
+
+function trackPlates() {
+  return TRACKS.map((track, i) => {
+    let done = 0, total = 0;
+    for (let k = track.from; k <= track.to && k < STAGES.length; k++) {
+      total++;
+      if (stageDone(STAGES[k])) done++;
+    }
+    const tone = ILLO.trackInk(track.name);
+    return `
+      <figure class="track-plate" style="--stage-ink:${tone.ink}">
+        <div class="track-plate-art">${ILLO.trackPlate(track.name)}</div>
+        <figcaption>
+          <p class="track-plate-kicker">Plate ${String(i + 1).padStart(2, "0")} · ${done} of ${total} stages</p>
+          <h3 class="track-plate-name">${track.name}</h3>
+          <p class="track-plate-blurb">${TRACK_BLURBS[track.name] || ""}</p>
+        </figcaption>
+      </figure>`;
+  }).join("");
+}
+
 function showHome() {
   activeStageIdx = null;
   refreshSidebar();
@@ -348,7 +375,23 @@ function showHome() {
             <span><strong>3</strong> tracks, beginner to expert</span>
           </div>
         </div>
-        <div class="hero-demo reveal" style="--index:2">
+        <figure class="hero-plate reveal" style="--index:2">
+          ${ILLO.sansevieria()}
+          <figcaption class="plate-caption">
+            <em>Sansevieria trifasciata</em> — the snake plant. Hard to kill,
+            grows in low light, gets taller every month you pay it a little attention.
+          </figcaption>
+        </figure>
+      </div>
+
+      <div class="tracks-block reveal" style="--index:5">
+        <div class="plate-num"><span class="plate-ink">Three tracks</span><span class="plate-rule"></span><span>beginner to expert</span></div>
+        <div class="track-plates">${trackPlates()}</div>
+      </div>
+
+      <div class="specimen-block reveal" style="--index:6">
+        <div class="plate-num"><span class="plate-ink">What a lesson looks like</span><span class="plate-rule"></span></div>
+        <div class="hero-demo">
           <div class="editor-chrome">
             <span class="dot"></span><span class="dot"></span><span class="dot"></span>
             <span class="file-name">stage-8.py</span>
@@ -365,9 +408,10 @@ print(greet(<span class="st">"Asha"</span>))</pre>
           <div class="demo-verdict">${CHECK_SVG}<span>Correct &nbsp;<span class="xp-gain">+10 XP</span></span></div>
         </div>
       </div>
-      <div class="journey-block reveal" style="--index:5">
+
+      <div class="journey-block reveal" style="--index:7">
         <h2 class="badge-shelf-heading">The journey</h2>
-        <p class="section-note">Every stage and every Firewall sector on one linked trail. Click any open node.</p>
+        <p class="section-note">Every stage and every Firewall sector on one growing vine. Click any open node.</p>
         <div class="journey-map" id="journey-map">${journeyMapSvg()}</div>
       </div>
     </section>`;
@@ -377,6 +421,7 @@ print(greet(<span class="st">"Asha"</span>))</pre>
     else showStage(step.idx);
   });
   wireJourneyMap(document.getElementById("journey-map"));
+  ILLO.observe(main);
   window.scrollTo({ top: 0 });
 }
 

@@ -593,14 +593,17 @@ function fwDraw() {
 const BUG_GLYPH = `<path d="M-4 0 a4 4.6 0 1 0 8 0 a4 4.6 0 1 0 -8 0 M0 -4.6 L0 4.6 M-4 -2 l-2.4 -1.6 M-4 2 l-2.6 0.6 M4 -2 l2.4 -1.6 M4 2 l2.6 0.6 M-1.6 -5.8 l-1 -1.6 M1.6 -5.8 l1 -1.6" stroke="currentColor" stroke-width="1.1" fill="none"/>`;
 
 // map colors, centralised (SVG strings cannot read CSS variables)
-const MAP_INK = { ink: "#12100D", line: "#D8D3C8", muted: "#6F6A61", faint: "#A79F92" };
+const MAP_INK = {
+  ink: "#171309", line: "#E3D9C2", muted: "#756D5D", faint: "#9A907C",
+  pencil: "#D3C9B2", fern: "#2E5E3A", amber: "#A97708",
+};
 
 // two layouts: 4-across desktop, 2-across large-type mobile
 function mapPreset() {
   const mobile = typeof window !== "undefined" && window.matchMedia("(max-width: 700px)").matches;
   return mobile
-    ? { cols: [120, 300], w: 420, y0: 62, rowH: 98, stageR: 26, numSize: 19, labelSize: 13, labelDy: 48, bugR: 15, ringPad: 8 }
-    : { cols: [86, 242, 398, 554], w: 640, y0: 64, rowH: 96, stageR: 23, numSize: 17, labelSize: 10.5, labelDy: 44, bugR: 13, ringPad: 7 };
+    ? { cols: [120, 300], w: 420, y0: 66, rowH: 104, stageR: 27, numSize: 19, labelSize: 13, labelDy: 50, bugR: 15, ringPad: 9, leaf: 20 }
+    : { cols: [86, 242, 398, 554], w: 640, y0: 66, rowH: 100, stageR: 24, numSize: 17, labelSize: 10.5, labelDy: 46, bugR: 13, ringPad: 8, leaf: 17 };
 }
 
 function journeyNodes(P) {
@@ -627,6 +630,9 @@ function nodeUnlocked(n) {
   return n.type === "stage" ? stageUnlocked(n.idx) : stageDone(STAGES[n.idx]);
 }
 
+/* The trail is one vine: inked and leafed as far as you have got, pencil
+   underdrawing beyond. Stages are specimen medallions on it, Firewall sectors
+   are beetles perched between them. */
 function journeyMapSvg() {
   const P = mapPreset();
   const nodes = journeyNodes(P);
@@ -634,13 +640,35 @@ function journeyMapSvg() {
   const H = nodes[nodes.length - 1].y + P.y0;
   let s = `<svg viewBox="0 0 ${P.w} ${H}" class="journey-svg" role="list" aria-label="Course journey map">`;
 
+  /* the stem, one gently curved segment at a time so each can carry its own state */
+  let leaves = "";
   for (let k = 1; k < nodes.length; k++) {
     const a = nodes[k - 1], b = nodes[k];
     const done = nodeComplete(a);
-    s += `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"
-           stroke="${done ? "#12100D" : "#D8D3C8"}" stroke-width="${done ? 2.5 : 2}"
-           ${done ? "" : `stroke-dasharray="3 6"`} stroke-linecap="round"/>`;
+    const dx = b.x - a.x, dy = b.y - a.y;
+    /* bow each length of stem sideways, alternating, so the trail grows
+       rather than being ruled */
+    const seg = Math.hypot(dx, dy) || 1;
+    const nx = -dy / seg, ny = dx / seg;
+    const bow = (k % 2 ? 1 : -1) * Math.min(14, seg * 0.11);
+    const c1x = a.x + dx * 0.3 + nx * bow, c1y = a.y + dy * 0.3 + ny * bow;
+    const c2x = b.x - dx * 0.3 + nx * bow, c2y = b.y - dy * 0.3 + ny * bow;
+    s += `<path class="jstem ${done ? "inked" : "pencil"}" fill="none"
+           d="M ${a.x} ${a.y} C ${c1x} ${c1y} ${c2x} ${c2y} ${b.x} ${b.y}"/>`;
+
+    /* a leaf on every stretch of vine you have actually grown, sitting on the
+       curve itself and leaning off it */
+    if (done) {
+      const mx = (a.x + 3 * c1x + 3 * c2x + b.x) / 8;
+      const my = (a.y + 3 * c1y + 3 * c2y + b.y) / 8;
+      const out = bow >= 0 ? 1 : -1;
+      const angle = (Math.atan2(ny * out, nx * out) * 180) / Math.PI + (k % 2 ? 22 : -22);
+      const tone = ILLO.stageInk(k);
+      leaves += `<g class="jleaf" style="color:${tone.ink}">` +
+                ILLO.leafMark(mx, my, P.leaf, angle, k) + `</g>`;
+    }
   }
+  s += leaves;
 
   nodes.forEach((n, k) => {
     const complete = nodeComplete(n);
@@ -650,30 +678,27 @@ function journeyMapSvg() {
     n.delay = Math.min(k * 22, 900);
 
     if (n.type === "stage") {
-      const c = PASTELS[STAGES[n.idx].badge.color];
-      const fill = complete ? c.bg : unlocked ? "#FFFFFF" : "#F5F3EE";
-      const ring = complete ? c.ink : unlocked ? MAP_INK.ink : MAP_INK.line;
-      const txt = complete ? c.ink : unlocked ? MAP_INK.ink : MAP_INK.faint;
+      const tone = ILLO.stageInk(n.idx);
+      const color = complete || unlocked ? tone.ink : MAP_INK.pencil;
+      const size = P.stageR * 2;
+      const scale = size / 64;
       const aria = `Stage ${n.idx + 1}: ${STAGES[n.idx].name}${complete ? ", completed" : isNext ? ", your next step" : ""}`;
-      s += `<g class="jnode ${unlocked ? "live" : ""}" data-node="${id}" style="--pop:${n.delay}ms"${unlocked ? ` tabindex="0" role="button" aria-label="${aria}"` : ""}>`;
-      if (isNext) s += `<circle cx="${n.x}" cy="${n.y}" r="${n.type === "stage" ? P.stageR + P.ringPad : P.bugR + P.ringPad}" fill="none" stroke="${MAP_INK.ink}" stroke-opacity="0.35" stroke-width="1.5" class="pulse-ring"/>`;
-      s += `<circle cx="${n.x}" cy="${n.y}" r="${P.stageR}" fill="${fill}" stroke="${ring}" stroke-width="1.8"/>
-            <text x="${n.x}" y="${n.y + P.numSize * 0.36}" text-anchor="middle" font-family="Fraunces, Georgia, serif"
-                  font-size="${P.numSize}" font-weight="600" fill="${txt}">${n.idx + 1}</text>
-            <text x="${n.x}" y="${n.y + P.labelDy}" text-anchor="middle" font-family="'Geist Sans', sans-serif"
-                  font-size="${P.labelSize}" fill="${unlocked ? MAP_INK.muted : MAP_INK.faint}">${shortName(STAGES[n.idx].name)}</text>`;
+      s += `<g class="jnode medallion ${unlocked ? "live" : "future"}" data-node="${id}"` +
+           ` style="--pop:${n.delay}ms;color:${color}"${unlocked ? ` tabindex="0" role="button" aria-label="${aria}"` : ` aria-label="${aria}"`}>`;
+      if (isNext) s += `<circle cx="${n.x}" cy="${n.y}" r="${P.stageR + P.ringPad}" fill="none" stroke="currentColor" stroke-opacity="0.4" stroke-width="1.2" class="pulse-ring"/>`;
+      s += `<g transform="translate(${n.x - size / 2} ${n.y - size / 2}) scale(${scale})" stroke-width="${(1.4 / scale).toFixed(2)}">${ILLO.medallionInner(n.idx)}</g>`;
+      s += `<text class="jlabel" x="${n.x}" y="${n.y + P.labelDy}" text-anchor="middle"
+                  font-size="${P.labelSize}">${shortName(STAGES[n.idx].name)}</text>`;
       s += `</g>`;
     } else {
-      const fill = complete ? "#EBF0E8" : unlocked ? "#FAF1DF" : "#F5F3EE";
-      const ring = complete ? "#41603F" : unlocked ? "#8C6516" : MAP_INK.line;
+      const color = complete ? MAP_INK.fern : unlocked ? MAP_INK.amber : MAP_INK.pencil;
+      const w = P.bugR * 2.1;
+      const scale = w / 120;
       const aria = `Firewall sector ${n.idx + 1}${complete ? ", defended" : isNext ? ", your next step" : ""}`;
-      s += `<g class="jnode ${unlocked ? "live" : ""}" data-node="${id}" style="--pop:${n.delay}ms"${unlocked ? ` tabindex="0" role="button" aria-label="${aria}"` : ""}>`;
-      if (isNext) s += `<circle cx="${n.x}" cy="${n.y}" r="${P.bugR + P.ringPad}" fill="none" stroke="#8C6516" stroke-opacity="0.5" stroke-width="1.5" class="pulse-ring"/>`;
-      s += `<circle cx="${n.x}" cy="${n.y}" r="${P.bugR}" fill="${fill}" stroke="${ring}" stroke-width="1.5"/>`;
-      const glyphScale = P.bugR / 13;
-      s += complete
-        ? `<path d="M${n.x - 5 * glyphScale} ${n.y} l${3.4 * glyphScale} ${3.6 * glyphScale} l${6.6 * glyphScale} ${-7 * glyphScale}" stroke="#41603F" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`
-        : `<g transform="translate(${n.x} ${n.y}) scale(${glyphScale})" color="${unlocked ? "#8C6516" : MAP_INK.faint}">${BUG_GLYPH}</g>`;
+      s += `<g class="jnode beetle ${unlocked ? "live" : "future"}" data-node="${id}"` +
+           ` style="--pop:${n.delay}ms;color:${color}"${unlocked ? ` tabindex="0" role="button" aria-label="${aria}"` : ` aria-label="${aria}"`}>`;
+      if (isNext) s += `<circle cx="${n.x}" cy="${n.y}" r="${P.bugR + P.ringPad}" fill="none" stroke="currentColor" stroke-opacity="0.45" stroke-width="1.2" class="pulse-ring"/>`;
+      s += `<g transform="translate(${n.x - w / 2} ${n.y - (w * 140 / 120) / 2}) scale(${scale})" stroke-width="${(1.4 / scale).toFixed(2)}">${ILLO.beetleInner()}</g>`;
       s += `</g>`;
     }
   });

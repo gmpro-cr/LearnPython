@@ -339,6 +339,10 @@ function drawPod() {
 /* Firewall. Bug defence drawn as an entomological plate, so the game and the
    course belong to the same world. */
 
+function beetleInner() {
+  return drawBeetle({ inner: true });
+}
+
 function drawBeetle(opts) {
   const o = opts || {};
   const body = `M 60 44 Q 84 52 84 88 Q 84 118 60 126 Q 36 118 36 88 Q 36 52 60 44`;
@@ -352,18 +356,21 @@ function drawBeetle(opts) {
 
   const antennae = ink(`M 55 20 Q 44 10 34 8`, 5) + ink(`M 65 20 Q 76 10 86 8`, 5);
 
-  return svgWrap(
-    "0 0 120 140",
+  const inner =
     wash(body + " Z") +
-      legs +
-      ink(body, 0) + ink(pronotum, 1) + ink(head, 2) +
-      ink(`M 60 46 L 60 122`, 2) +
-      ink(`M 48 56 Q 45 88 50 114`, 4) + ink(`M 72 56 Q 75 88 70 114`, 4) +
-      antennae +
-      dots(stipple(48, 86, 7, 24, 9, 29) + stipple(72, 86, 7, 24, 9, 31), 6),
-    { class: "beetle-illo", width: o.width, height: o.height, ink: o.ink,
-      label: o.label || "" }
-  );
+    legs +
+    ink(body, 0) + ink(pronotum, 1) + ink(head, 2) +
+    ink(`M 60 46 L 60 122`, 2) +
+    ink(`M 48 56 Q 45 88 50 114`, 4) + ink(`M 72 56 Q 75 88 70 114`, 4) +
+    antennae +
+    dots(stipple(48, 86, 7, 24, 9, 29) + stipple(72, 86, 7, 24, 9, 31), 6);
+
+  if (o.inner) return inner;
+
+  return svgWrap("0 0 120 140", inner, {
+    class: "beetle-illo", width: o.width, height: o.height, ink: o.ink,
+    label: o.label || "",
+  });
 }
 
 /* ------------------------------------------------ leaves and vine ------- */
@@ -372,8 +379,9 @@ function drawBeetle(opts) {
 function leafAt(x, y, len, angleDeg, seed) {
   const a = (angleDeg * Math.PI) / 180;
   const tip = [x + Math.cos(a) * len, y + Math.sin(a) * len];
-  const bow = (seed % 2 ? 1 : -1) * len * 0.14;
-  const g = bladeGeometry([x, y], tip, len * 0.46, bow);
+  /* wide and well bowed: a narrow blade at this size reads as an arrowhead */
+  const bow = (seed % 2 ? 1 : -1) * len * 0.28;
+  const g = bladeGeometry([x, y], tip, len * 0.62, bow);
   return { blade: bladePath(g) + " Z", vein: veinPath(g) };
 }
 
@@ -490,28 +498,39 @@ function frameInner(variant) {
   return `<circle cx="32" cy="32" r="29"/>`;
 }
 
+/* the medallion's contents in its own 64x64 space, for callers that place it
+   inside a larger drawing */
+function medallionInner(idx, opts) {
+  const o = opts || {};
+  const form = FORMS[(idx + Math.floor(idx / FORMS.length)) % FORMS.length];
+  const frame = Math.floor(idx / FORMS.length) % 3;
+  return `<circle class="medallion-ground" cx="32" cy="32" r="29"/>` +
+    `<g class="medallion-frame">${frameInner(frame)}</g>` +
+    formInner(form, idx * 7 + 3) +
+    /* the number sits in a notch at the foot of the plate, like a specimen label */
+    (o.noNumber ? "" :
+      `<rect class="medallion-plate" x="22" y="50" width="20" height="13" rx="3"/>` +
+      `<text class="medallion-num" x="32" y="59.5" text-anchor="middle">${idx + 1}</text>`);
+}
+
 function drawMedallion(idx, size, opts) {
   const o = opts || {};
   const tone = INKS[idx % INKS.length];
-  const form = FORMS[(idx + Math.floor(idx / FORMS.length)) % FORMS.length];
-  const frame = Math.floor(idx / FORMS.length) % 3;
+  return svgWrap("0 0 64 64", medallionInner(idx, o), {
+    class: "medallion",
+    width: size || 56,
+    height: size || 56,
+    ink: o.ink || tone.ink,
+    label: o.label || "",
+  });
+}
 
-  return svgWrap(
-    "0 0 64 64",
-    `<circle class="medallion-ground" cx="32" cy="32" r="29"/>` +
-      `<g class="medallion-frame">${frameInner(frame)}</g>` +
-      formInner(form, idx * 7 + 3) +
-      /* the number sits in a notch at the foot of the plate, like a specimen label */
-      `<rect class="medallion-plate" x="22" y="50" width="20" height="13" rx="3"/>` +
-      `<text class="medallion-num" x="32" y="59.5" text-anchor="middle">${idx + 1}</text>`,
-    {
-      class: "medallion",
-      width: size || 56,
-      height: size || 56,
-      ink: o.ink || tone.ink,
-      label: o.label || "",
-    }
-  );
+/* a single leaf, for callers drawing their own scene */
+function leafMark(x, y, len, angleDeg, seed) {
+  const L = leafAt(x, y, len, angleDeg, seed || 1);
+  return `<path class="wash" d="${L.blade}"/>` +
+         `<path class="ink" d="${L.blade}"/>` +
+         `<path class="ink" d="${L.vein}"/>`;
 }
 
 /* ------------------------------------------------ small marks ----------- */
@@ -615,8 +634,11 @@ const ILLO = {
   frond: drawFrond,
   pod: drawPod,
   beetle: drawBeetle,
+  beetleInner,
   vine: drawVine,
   medallion: drawMedallion,
+  medallionInner,
+  leafMark,
   pressed: drawPressed,
 
   trackPlate(name) {
