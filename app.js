@@ -175,7 +175,6 @@ const BUG_MINI_SVG = `<svg width="12" height="12" viewBox="-10 -10 20 20" color=
 
 const CHECK_SVG = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8.5l3.2 3L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 const CROSS_SVG = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
-const LOCK_SVG = `<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><rect x="3" y="7" width="10" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 7V5a2.5 2.5 0 015 0v2" stroke="currentColor" stroke-width="1.5"/></svg>`;
 
 /* ------------------------------------------------ header / sidebar ------- */
 
@@ -216,10 +215,12 @@ function refreshSidebar() {
         (complete ? " done" : "") +
         (idx === activeStageIdx ? " active" : "") +
         (!unlocked ? " locked" : "");
+      btn.dataset.stage = idx;
+      btn.style.setProperty("--stage-ink", ILLO.stageInk(idx).ink);
       btn.innerHTML =
-        `<span class="stage-num">${complete ? CHECK_SVG : idx + 1}</span>` +
+        `<span class="stage-num">${idx + 1}</span>` +
         `<span class="stage-name">${stage.name}</span>` +
-        (!unlocked ? `<span class="stage-glyph" style="color:#BDB6A9">${LOCK_SVG}</span>` : "");
+        (!unlocked ? `<span class="stage-glyph">${ILLO.pressed(14)}</span>` : "");
       if (unlocked) btn.addEventListener("click", () => showStage(idx));
       else btn.disabled = true;
       list.appendChild(btn);
@@ -242,7 +243,11 @@ function refreshSidebar() {
     }
   });
 
+  growVine();
+
   // quiet two-step reset control (no browser confirm dialogs)
+  const foot = document.getElementById("sidebar-foot");
+  foot.innerHTML = "";
   const reset = document.createElement("button");
   reset.className = "reset-btn";
   reset.textContent = "Reset all progress";
@@ -258,19 +263,54 @@ function refreshSidebar() {
       setTimeout(() => { delete reset.dataset.armed; reset.textContent = "Reset all progress"; }, 4000);
     }
   });
-  list.appendChild(reset);
+  foot.appendChild(reset);
 
-  const pct = Math.round((doneCount() / totalExercises) * 100);
-  document.getElementById("progress-fill").style.width = pct + "%";
-  const track = document.getElementById("progress-track");
-  if (track) {
-    track.setAttribute("aria-valuemax", totalExercises);
-    track.setAttribute("aria-valuenow", doneCount());
-  }
   const nxt = nextLevel();
   document.getElementById("progress-note").textContent =
     `${doneCount()} of ${totalExercises} exercises` +
     (nxt ? ` · ${nxt.name} at ${nxt.at} XP` : " · top rank reached");
+}
+
+/* ------------------------------------------------ the vine --------------- */
+
+/* Set by celebrateStage: the stage whose leaf should draw itself in rather
+   than simply being there on the next render. */
+let freshLeafStage = null;
+
+function growVine() {
+  const layer = document.getElementById("vine-layer");
+  const rail = layer && layer.parentElement;
+  if (!layer || !rail) return;
+
+  const height = rail.offsetHeight;
+  if (!height) return;
+
+  /* the first unfinished stage carries the bud: it is what happens next */
+  let budIdx = -1;
+  for (let i = 0; i < STAGES.length; i++) {
+    if (stageUnlocked(i) && !stageDone(STAGES[i])) { budIdx = i; break; }
+  }
+
+  const marks = [];
+  rail.querySelectorAll(".stage-item").forEach((row) => {
+    const idx = Number(row.dataset.stage);
+    const y = row.offsetTop + row.offsetHeight / 2;
+    const state = stageDone(STAGES[idx]) ? "leaf" : idx === budIdx ? "bud" : "bare";
+    marks.push({ y, state, ink: ILLO.stageInk(idx).ink, key: String(idx) });
+  });
+  if (!marks.length) return;
+
+  layer.innerHTML = ILLO.vine(height, marks);
+
+  if (freshLeafStage !== null) {
+    const leaf = layer.querySelector('.vine-leaf[data-key="' + freshLeafStage + '"]');
+    freshLeafStage = null;
+    if (leaf && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      leaf.classList.add("fresh");
+      ILLO.arm(leaf);
+      ILLO.draw(leaf, { duration: 700, stagger: 0 });
+    }
+  }
 }
 
 /* ------------------------------------------------ home view -------------- */
@@ -531,6 +571,9 @@ function pick(arr) {
 
 function celebrateStage(stageIdx) {
   const stage = STAGES[stageIdx];
+  /* the vine grows a leaf for this stage on the next sidebar render */
+  freshLeafStage = String(stageIdx);
+  refreshSidebar();
   const backdrop = document.getElementById("modal-backdrop");
   const modal = document.getElementById("modal");
   const last = stageIdx === STAGES.length - 1;

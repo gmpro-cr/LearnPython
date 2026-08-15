@@ -137,15 +137,18 @@ body {
 
 @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
 
+/* specimen labels rather than game pills: hairline box, mono, letterspaced */
 .level-tag {
-  font-size: 11px;
+  font-family: var(--mono);
+  font-size: 10.5px;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 600;
-  background: var(--pastel-green);
-  color: var(--pastel-green-ink);
-  border-radius: 9999px;
-  padding: 4px 12px;
+  letter-spacing: 0.12em;
+  font-weight: 500;
+  color: var(--fern);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 11px;
 }
 
 .xp-pill {
@@ -153,12 +156,14 @@ body {
   align-items: center;
   gap: 6px;
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 500;
-  color: var(--pastel-yellow-ink);
-  background: var(--pastel-yellow);
-  border-radius: 9999px;
-  padding: 5px 13px;
+  letter-spacing: 0.06em;
+  color: var(--amber);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 11px;
   transition: transform 200ms var(--ease-out);
 }
 .xp-pill.bump { animation: bump 500ms var(--ease-out); }
@@ -213,27 +218,23 @@ body.sidebar-hidden .sidebar {
   margin-bottom: 14px;
 }
 
-.progress-track {
-  height: 4px;
-  background: var(--border);
-  border-radius: 9999px;
-  overflow: hidden;
-}
-.progress-fill {
-  height: 100%;
-  width: 0%;
-  background: var(--ink);
-  border-radius: 9999px;
-  transition: width 600ms var(--ease-out);
-}
 .progress-note {
   font-family: var(--mono);
   font-size: 11px;
   color: var(--muted);
-  margin: 8px 0 22px;
+  margin: 6px 0 20px;
 }
 
-.stage-list { display: flex; flex-direction: column; }
+/* the vine runs behind the stage rows, in its own gutter */
+.journey-rail { position: relative; }
+.vine-layer {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 22px;
+  pointer-events: none;
+}
+
+.stage-list { display: flex; flex-direction: column; padding-left: 24px; }
 
 .track-heading {
   font-family: var(--mono);
@@ -265,8 +266,8 @@ body.sidebar-hidden .sidebar {
 .stage-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 9px 10px;
+  gap: 9px;
+  padding: 9px 8px;
   margin-bottom: 1px;
   border: none;
   background: none;
@@ -283,25 +284,18 @@ body.sidebar-hidden .sidebar {
 .stage-item.active { background: var(--bone); font-weight: 600; color: var(--ink); }
 .stage-item.locked { color: var(--faint); cursor: default; }
 
+/* the vine says what is finished, so the number is just a number */
 .stage-num {
   font-family: var(--mono);
   font-size: 11px;
-  width: 24px; height: 24px;
-  border: 1px solid var(--border);
-  border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  width: 18px;
   flex-shrink: 0;
-  background: var(--surface);
-  color: var(--muted);
+  text-align: right;
+  color: var(--faint);
+  transition: color 200ms var(--ease-out);
 }
-.stage-item.done .stage-num {
-  background: var(--pastel-green);
-  border-color: transparent;
-  color: var(--pastel-green-ink);
-}
-.stage-item.active .stage-num { border-color: var(--ink); color: var(--ink); }
+.stage-item.done .stage-num { color: var(--stage-ink, var(--fern)); }
+.stage-item.active .stage-num { color: var(--ink); }
 
 .stage-name { flex: 1; }
 

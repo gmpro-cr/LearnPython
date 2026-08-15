@@ -393,15 +393,17 @@ function drawVine(height, marks) {
     py = ny;
   }
 
+  /* the journey reads top to bottom, so the stem inks in downwards: solid as
+     far as you have got, pencil underdrawing from there on */
   const grown = marks.filter((m) => m.state !== "bare");
-  const topGrown = grown.length ? Math.min(...grown.map((m) => m.y)) - 14 : height;
+  const grownTo = grown.length ? Math.max(...grown.map((m) => m.y)) + 16 : 0;
 
   let parts = "";
   marks.forEach((m, i) => {
     const side = i % 2 === 0 ? 1 : -1;
     if (m.state === "leaf") {
       const L = leafAt(midX, m.y, 15, side > 0 ? -22 : 202, i + 1);
-      parts += `<g class="vine-leaf" style="color:${m.ink};--i:${i}">` +
+      parts += `<g class="vine-leaf" data-key="${m.key || i}" style="color:${m.ink};--i:${i}">` +
                `<path class="wash" d="${L.blade}"/>` +
                `<path class="ink" d="${L.blade}"/>` +
                `<path class="ink" d="${L.vein}"/></g>`;
@@ -416,7 +418,7 @@ function drawVine(height, marks) {
   return `<svg class="illo vine" viewBox="0 0 ${w} ${height}" width="${w}" height="${height}" fill="none" ` +
          `stroke="currentColor" stroke-width="1.4" stroke-linecap="round" preserveAspectRatio="none" aria-hidden="true">` +
          `<path class="stem-pencil" d="${stem}"/>` +
-         `<clipPath id="vine-grown"><rect x="0" y="${r2(topGrown)}" width="${w}" height="${r2(height - topGrown)}"/></clipPath>` +
+         `<clipPath id="vine-grown"><rect x="0" y="0" width="${w}" height="${r2(Math.max(0, grownTo))}"/></clipPath>` +
          `<path class="stem-ink" d="${stem}" clip-path="url(#vine-grown)"/>` +
          parts +
          `</svg>`;
