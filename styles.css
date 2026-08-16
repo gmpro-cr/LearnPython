@@ -114,30 +114,6 @@ body {
 
 .topbar-right { display: flex; align-items: center; gap: 12px; }
 
-.engine-chip {
-  display: inline-flex;
-  align-items: flex-start;   /* the status text wraps; keep the dot on line one */
-  gap: 7px;
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--muted);
-  text-align: right;
-}
-
-.engine-dot {
-  width: 7px; height: 7px; border-radius: 50%;
-  margin-top: 5px;
-  flex-shrink: 0;
-  background: var(--amber);
-  transition: background 300ms var(--ease-out);
-}
-.engine-dot.idle { background: var(--line-strong); animation: none; }
-.engine-dot.loading { animation: pulse 1.2s ease-in-out infinite; }
-.engine-dot.ready { background: var(--fern); animation: none; }
-.engine-dot.error { background: var(--terracotta); animation: none; }
-
-@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
-
 /* ---------- Account menu ---------- */
 /* Rank, XP and engine status now live inside this menu rather than strung
    along the topbar. The sidebar still shows the honest counts in the open, so
@@ -1484,7 +1460,6 @@ kbd {
 @media (max-width: 900px) {
   .shell { grid-template-columns: minmax(0, 1fr); gap: 20px; padding: 24px 20px 56px; }
   .topbar-inner { padding: 12px 20px; }
-  .engine-chip { display: none; }
   .sidebar {
     position: static; max-height: none; overflow: visible;
     min-width: 0; width: 100%;
@@ -1572,7 +1547,6 @@ kbd {
   .seed-fall { display: none; }
   .xp-pill.bump { animation: none; }
   html { scroll-behavior: auto; }
-  .engine-dot.loading { animation: none; }
   .pulse-ring { animation: none; opacity: 0.5; }
   .jnode { animation: none; }
   .verdict.show { animation: none; }

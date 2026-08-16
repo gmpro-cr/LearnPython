@@ -101,13 +101,6 @@ let runSeq = 0;
 const pending = new Map();
 const RUN_TIMEOUT_MS = 10000;
 
-function setEngineStatus(cls, text) {
-  const dot = document.querySelector(".engine-dot");
-  dot.classList.remove("loading", "ready", "error");
-  dot.classList.add(cls);
-  document.getElementById("engine-label").textContent = text;
-}
-
 /* Only the exercise Run buttons depend on Python. `.btn-run` is also worn by
    navigation ("Firewall 3: defend the sector", the modal's continue button),
    and those were being disabled too while the engine loaded.
@@ -124,17 +117,14 @@ function setRunButtons(enabled, label) {
 
 function bootPython(restarting) {
   pyReady = false;
-  setEngineStatus("loading", restarting ? "Restarting Python" : "Starting Python");
   setRunButtons(false, restarting ? "Restarting Python…" : "Getting Python ready…");
   worker = new Worker("worker.js?v=4");
   worker.onmessage = (e) => {
     const msg = e.data;
     if (msg.type === "ready") {
       pyReady = true;
-      setEngineStatus("ready", "Python ready");
       setRunButtons(true, "Run");
     } else if (msg.type === "boot-error") {
-      setEngineStatus("error", "Python did not load");
       setRunButtons(false, "Python did not load — reload the page");
     } else if (msg.type === "result") {
       const p = pending.get(msg.id);
@@ -146,7 +136,6 @@ function bootPython(restarting) {
     }
   };
   worker.onerror = () => {
-    setEngineStatus("error", "Python did not load");
     setRunButtons(false, "Python did not load — reload the page");
   };
 }
@@ -804,10 +793,12 @@ function ensureEngine() {
 
 /* ------------------------------------------------ account menu ----------- */
 
-/* One control in the topbar holds everything that used to sit along it: rank,
-   XP, the Python engine status, and sign-in. The rows live in index.html so
-   their ids survive — refreshHeader and setEngineStatus keep writing to them
-   whether the menu is open or shut. */
+/* One control in the topbar holds what used to sit along it: rank, XP and
+   sign-in. The rows live in index.html so their ids survive — refreshHeader
+   keeps writing to them whether the menu is open or shut.
+
+   Python's state is deliberately not here. It belongs on the Run button, which
+   is where someone notices it. */
 
 const accountTrigger = document.getElementById("account-trigger");
 const accountPanel = document.getElementById("account-panel");
@@ -888,7 +879,6 @@ if (typeof onSyncChange === "function") {
 
 refreshHeader(false);
 showHome();
-setEngineStatus("idle", "Loads with your first lesson");
 
 /* Sync boots last and never blocks the course: if it fails, everything above
    has already rendered and keeps working from localStorage. */
