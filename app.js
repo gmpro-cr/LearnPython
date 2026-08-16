@@ -294,9 +294,9 @@ function refreshSidebar() {
   foot.appendChild(reset);
 
   const nxt = nextLevel();
-  document.getElementById("progress-note").textContent =
+  document.getElementById("progress-note").innerHTML =
     `${doneCount()} of ${totalExercises} exercises` +
-    (nxt ? ` · ${nxt.name} at ${nxt.at} XP` : " · top rank reached");
+    `<span class="progress-next">${nxt ? `${nxt.name} at ${nxt.at} XP` : "top rank reached"}</span>`;
 }
 
 /* ------------------------------------------------ the vine --------------- */
