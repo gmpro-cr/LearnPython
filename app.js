@@ -203,10 +203,14 @@ function refreshHeader(bump) {
   document.getElementById("xp-count").textContent = state.xp;
   document.getElementById("level-tag").textContent = currentLevel().name;
   if (bump) {
-    const pill = document.querySelector(".xp-pill");
-    pill.classList.remove("bump");
-    void pill.offsetWidth;
-    pill.classList.add("bump");
+    /* the XP figure is inside the menu now, so the thing that reacts has to be
+       the trigger — otherwise earning XP shows no feedback at all */
+    const mark = document.getElementById("account-trigger") || document.querySelector(".xp-pill");
+    if (mark) {
+      mark.classList.remove("bump");
+      void mark.offsetWidth;
+      mark.classList.add("bump");
+    }
   }
 }
 
@@ -728,11 +732,15 @@ document.getElementById("home-link").addEventListener("click", (e) => {
 
 // hideable side panel (preference persists per device)
 const panelToggle = document.getElementById("panel-toggle");
+const panelReopen = document.getElementById("panel-reopen");
 function setPanel(hidden, save) {
   document.body.classList.toggle("sidebar-hidden", hidden);
   panelToggle.setAttribute("aria-expanded", String(!hidden));
   panelToggle.setAttribute("aria-label", hidden ? "Show side panel" : "Hide side panel");
   panelToggle.title = hidden ? "Show side panel" : "Hide side panel";
+  /* the toggle sits on the panel it hides, so a handle stays behind to bring
+     it back — otherwise closing the panel closes the only way to reopen it */
+  if (panelReopen) panelReopen.hidden = !hidden;
   if (save) {
     try { localStorage.setItem("pyquest-panel", hidden ? "hidden" : "open"); } catch (e) {}
   }
@@ -740,9 +748,15 @@ function setPanel(hidden, save) {
 panelToggle.addEventListener("click", () => {
   setPanel(!document.body.classList.contains("sidebar-hidden"), true);
 });
+if (panelReopen) {
+  panelReopen.addEventListener("click", () => setPanel(false, true));
+}
 try {
-  if (localStorage.getItem("pyquest-panel") === "hidden") setPanel(true, false);
-} catch (e) {}
+  // always run it: the reopen handle's visibility is decided here too
+  setPanel(localStorage.getItem("pyquest-panel") === "hidden", false);
+} catch (e) {
+  setPanel(false, false);
+}
 
 document.getElementById("modal-backdrop").addEventListener("click", (e) => {
   if (e.target === e.currentTarget) e.currentTarget.classList.add("hidden");
@@ -774,50 +788,82 @@ function ensureEngine() {
   bootPython();
 }
 
-/* ------------------------------------------------ account control -------- */
+/* ------------------------------------------------ account menu ----------- */
 
-/* One control in the topbar. Signed out it offers sync; signed in it shows who
-   you are and how the last save went. With sync unconfigured it never appears,
-   so the course looks exactly as it did before any of this existed. */
+/* One control in the topbar holds everything that used to sit along it: rank,
+   XP, the Python engine status, and sign-in. The rows live in index.html so
+   their ids survive — refreshHeader and setEngineStatus keep writing to them
+   whether the menu is open or shut. */
+
+const accountTrigger = document.getElementById("account-trigger");
+const accountPanel = document.getElementById("account-panel");
+
+function setAccountMenu(open) {
+  if (!accountTrigger || !accountPanel) return;
+  accountPanel.hidden = !open;
+  accountTrigger.setAttribute("aria-expanded", String(open));
+  document.getElementById("account-menu").classList.toggle("open", open);
+}
+
+if (accountTrigger) {
+  accountTrigger.addEventListener("click", (e) => {
+    e.stopPropagation();
+    setAccountMenu(accountPanel.hidden);
+  });
+  accountPanel.addEventListener("click", (e) => e.stopPropagation());
+  document.addEventListener("click", () => setAccountMenu(false));
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !accountPanel.hidden) {
+      setAccountMenu(false);
+      accountTrigger.focus();
+    }
+  });
+}
+
+/* The sign-in section of the menu. With sync unconfigured or Google switched
+   off it stays empty, and the menu is simply rank / XP / engine. */
 function renderAccount(s) {
   const slot = document.getElementById("account-slot");
+  const nameOut = document.getElementById("account-trigger-name");
+  const mark = document.getElementById("account-mark");
   if (!slot) return;
 
-  if (s.status === "off") {
+  const who = typeof syncIdentity === "function" ? syncIdentity() : null;
+
+  // the trigger shows who you are, if anyone
+  if (nameOut) nameOut.textContent = who ? who.name : "";
+  if (mark && who && who.avatar) {
+    mark.innerHTML = `<img class="account-avatar" src="${who.avatar}" alt="" referrerpolicy="no-referrer" />`;
+  }
+
+  if (!s || s.status === "off") {
     slot.innerHTML = "";
     return;
   }
 
-  const who = typeof syncIdentity === "function" ? syncIdentity() : null;
-
   if (!who) {
-    /* If the server is unreachable, say so where it can be read rather than
-       hiding it in a tooltip — and keep the button, since it may come back. */
     const unavailable = s.status === "offline";
     slot.innerHTML =
-      (unavailable ? `<span class="account-msg">${s.detail}</span>` : "") +
-      `<button class="account-btn" id="account-signin" ${unavailable ? 'data-quiet="1"' : ""} title="${
-        s.detail || "Save your journey and pick it up on another device"
-      }">${s.status === "syncing" ? "Checking…" : "Sign in to save"}</button>`;
+      `<button class="account-btn" id="account-signin">${
+        s.status === "syncing" ? "Checking…" : "Sign in to save"
+      }</button>` +
+      `<p class="account-msg">${
+        unavailable ? s.detail : "Save your journey and pick it up on another device."
+      }</p>`;
     const btn = document.getElementById("account-signin");
     if (btn) btn.addEventListener("click", () => signInWithGoogle());
     return;
   }
 
-  const mark =
-    s.status === "synced" ? "saved"
-    : s.status === "syncing" ? "syncing…"
-    : "on this device";
+  const mark2 =
+    s.status === "synced" ? "Saved to your account"
+    : s.status === "syncing" ? "Syncing…"
+    : "Saved on this device";
 
   slot.innerHTML =
-    `<div class="account">` +
-      (who.avatar
-        ? `<img class="account-avatar" src="${who.avatar}" alt="" referrerpolicy="no-referrer" />`
-        : `<span class="account-avatar account-initial">${(who.name || "?")[0].toUpperCase()}</span>`) +
-      `<span class="account-name">${who.name}</span>` +
-      `<span class="account-state ${s.status}">${mark}</span>` +
-      `<button class="account-out" id="account-signout">Sign out</button>` +
-    `</div>`;
+    `<p class="account-who">${who.email || who.name}</p>` +
+    `<p class="account-msg"><span class="account-state ${s.status}">${mark2}</span></p>` +
+    `<button class="account-btn" id="account-signout">Sign out</button>`;
   const out = document.getElementById("account-signout");
   if (out) out.addEventListener("click", () => signOutOfSync());
 }
