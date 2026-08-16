@@ -16,6 +16,6 @@
  */
 
 const SUPABASE_CONFIG = {
-  url: "",
-  anonKey: "",
+  url: "https://lxlbbzrntlfbukqiivoj.supabase.co",
+  anonKey: "sb_publishable_O7cZ0pkydHaweltOCRAIJQ_MZmUkSmt",
 };

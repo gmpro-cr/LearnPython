@@ -113,6 +113,15 @@ async function initSync() {
     return;
   }
 
+  /* Never offer a sign-in that cannot work. If the Google provider is not
+     switched on for this project — not configured yet, or turned off later —
+     the control stays hidden rather than handing someone a button that errors. */
+  if (!(await googleProviderEnabled())) {
+    sync.enabled = false;
+    setSyncStatus("off");
+    return;
+  }
+
   try {
     const { data } = await sync.client.auth.getSession();
     if (data && data.session) {
@@ -196,6 +205,26 @@ function queueSync(progress) {
 }
 
 /* ------------------------------------------------ sign in / out ---------- */
+
+/* Is Google switched on for this project? Asked once at boot; a "no" hides the
+   control completely, which is the difference between a course that quietly has
+   no sync yet and one with a button that throws. */
+async function googleProviderEnabled() {
+  try {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 5000);
+    const res = await fetch(SUPABASE_CONFIG.url + "/auth/v1/settings", {
+      headers: { apikey: SUPABASE_CONFIG.anonKey },
+      signal: ctl.signal,
+    });
+    clearTimeout(timer);
+    if (!res.ok) return false;
+    const settings = await res.json();
+    return !!(settings && settings.external && settings.external.google);
+  } catch (e) {
+    return false;
+  }
+}
 
 /* Is the project actually up? signInWithOAuth navigates the browser away, so a
    paused project would dump the learner on a DNS error page with the course
