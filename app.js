@@ -108,23 +108,34 @@ function setEngineStatus(cls, text) {
   document.getElementById("engine-label").textContent = text;
 }
 
-function setRunButtons(enabled) {
-  document.querySelectorAll(".btn-run").forEach((b) => (b.disabled = !enabled));
+/* Only the exercise Run buttons depend on Python. `.btn-run` is also worn by
+   navigation ("Firewall 3: defend the sector", the modal's continue button),
+   and those were being disabled too while the engine loaded.
+
+   The label carries the reason: the engine status used to explain a dead Run
+   button from the topbar, and it now lives in a menu, where nobody staring at
+   a dead button will look. Plain words, no "engine". */
+function setRunButtons(enabled, label) {
+  document.querySelectorAll(".run-exercise").forEach((b) => {
+    b.disabled = !enabled;
+    if (label) b.textContent = label;
+  });
 }
 
 function bootPython(restarting) {
   pyReady = false;
-  setEngineStatus("loading", restarting ? "Restarting Python engine" : "Starting Python engine");
-  setRunButtons(false);
+  setEngineStatus("loading", restarting ? "Restarting Python" : "Starting Python");
+  setRunButtons(false, restarting ? "Restarting Python…" : "Getting Python ready…");
   worker = new Worker("worker.js?v=4");
   worker.onmessage = (e) => {
     const msg = e.data;
     if (msg.type === "ready") {
       pyReady = true;
       setEngineStatus("ready", "Python ready");
-      setRunButtons(true);
+      setRunButtons(true, "Run");
     } else if (msg.type === "boot-error") {
-      setEngineStatus("error", "Engine failed — check connection and reload");
+      setEngineStatus("error", "Python did not load");
+      setRunButtons(false, "Python did not load — reload the page");
     } else if (msg.type === "result") {
       const p = pending.get(msg.id);
       if (p) {
@@ -134,7 +145,10 @@ function bootPython(restarting) {
       }
     }
   };
-  worker.onerror = () => setEngineStatus("error", "Engine failed — check connection and reload");
+  worker.onerror = () => {
+    setEngineStatus("error", "Python did not load");
+    setRunButtons(false, "Python did not load — reload the page");
+  };
 }
 
 function runExercise(code, check) {
@@ -492,7 +506,7 @@ function showStage(idx) {
         <textarea class="editor" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Python code editor: ${ex.title}"></textarea>
       </div>
       <div class="exercise-actions">
-        <button class="btn-run" ${pyReady ? "" : "disabled"}>Run</button>
+        <button class="btn-run run-exercise" ${pyReady ? "" : "disabled"}>${pyReady ? "Run" : "Getting Python ready…"}</button>
         <button class="btn-hint">Hint</button>
         <span class="kbd-note"><kbd>Ctrl</kbd> + <kbd>Enter</kbd> to run</span>
       </div>
@@ -599,7 +613,7 @@ async function execute(stage, stageIdx, ex, card) {
   }
 
   btn.disabled = !pyReady;
-  btn.textContent = "Run";
+  btn.textContent = pyReady ? "Run" : "Getting Python ready…";
 
   outBlock.classList.add("show");
   if (result.timedOut) {
@@ -874,7 +888,7 @@ if (typeof onSyncChange === "function") {
 
 refreshHeader(false);
 showHome();
-setEngineStatus("idle", "Python loads with your first lesson");
+setEngineStatus("idle", "Loads with your first lesson");
 
 /* Sync boots last and never blocks the course: if it fails, everything above
    has already rendered and keeps working from localStorage. */

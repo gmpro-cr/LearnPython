@@ -828,6 +828,13 @@ body.sidebar-hidden .sidebar {
 .btn-run:hover { background: #2E2617; transform: translateY(-1px); }
 .btn-run:active { transform: translateY(0) scale(0.97); }
 .btn-run:disabled { background: var(--line-strong); cursor: default; }
+/* while Python loads the button explains itself, so let it size to its words */
+.run-exercise:disabled {
+  background: none;
+  color: var(--muted);
+  border: 1px dashed var(--border);
+  font-weight: 500;
+}
 
 .btn-hint {
   font-family: var(--sans);
