@@ -19,13 +19,33 @@
   <link href="https://cdn.jsdelivr.net/npm/@fontsource/geist-sans@5.1.0/600.css" rel="stylesheet" />
   <link href="https://cdn.jsdelivr.net/npm/@fontsource/geist-mono@5.1.0/index.css" rel="stylesheet" />
   <link href="https://cdn.jsdelivr.net/npm/@fontsource/geist-mono@5.1.0/500.css" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=33" />
+  <link rel="stylesheet" href="styles.css?v=36" />
 </head>
 <body>
 
   <header class="topbar">
     <div class="topbar-inner">
       <a class="wordmark" href="#" id="home-link">PyQuest</a>
+
+      <div class="topbar-right">
+      <div class="journey-menu" id="journey-menu">
+        <button class="journey-trigger" id="journey-trigger" aria-haspopup="true" aria-expanded="false">
+          <span class="journey-label">Your journey</span>
+          <span class="journey-count" id="journey-count"></span>
+          <svg class="account-caret" width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+            <path d="M2 4 L5 7 L8 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+
+        <div class="journey-panel" id="journey-panel" hidden>
+          <p class="progress-note" id="progress-note">0 of 56 exercises</p>
+          <div class="journey-rail">
+            <div class="vine-layer" id="vine-layer" aria-hidden="true"></div>
+            <nav class="stage-list" id="stage-list"></nav>
+          </div>
+          <div id="sidebar-foot"></div>
+        </div>
+      </div>
 
       <div class="account-menu" id="account-menu">
         <button class="account-trigger" id="account-trigger" aria-haspopup="true" aria-expanded="false" aria-label="Progress and account">
@@ -54,28 +74,12 @@
           <div class="panel-account" id="account-slot"></div>
         </div>
       </div>
+      </div>
     </div>
   </header>
 
   <div class="shell">
 
-    <aside class="sidebar">
-      <div class="sidebar-head">
-        <p class="sidebar-heading">Your journey</p>
-        <button class="panel-toggle" id="panel-toggle" aria-label="Hide side panel" aria-expanded="true" title="Hide side panel">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <rect x="1.5" y="2.5" width="13" height="11" rx="2" stroke="currentColor" stroke-width="1.4"/>
-            <line x1="6" y1="2.5" x2="6" y2="13.5" stroke="currentColor" stroke-width="1.4"/>
-          </svg>
-        </button>
-      </div>
-      <p class="progress-note" id="progress-note">0 of 25 exercises</p>
-      <div class="journey-rail">
-        <div class="vine-layer" id="vine-layer" aria-hidden="true"></div>
-        <nav class="stage-list" id="stage-list"></nav>
-      </div>
-      <div id="sidebar-foot"></div>
-    </aside>
 
     <main class="main" id="main"></main>
 
@@ -92,12 +96,6 @@
     <div class="modal" id="modal" role="dialog" aria-modal="true" aria-label="Progress update"></div>
   </div>
 
-  <button class="panel-reopen" id="panel-reopen" aria-label="Show side panel" title="Show side panel">
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <rect x="1.5" y="2.5" width="13" height="11" rx="2" stroke="currentColor" stroke-width="1.4"/>
-      <line x1="6" y1="2.5" x2="6" y2="13.5" stroke="currentColor" stroke-width="1.4"/>
-    </svg>
-  </button>
 
   <div class="confetti-layer" id="confetti-layer" aria-hidden="true"></div>
 
@@ -106,6 +104,6 @@
   <script src="illustrations.js?v=5"></script>
   <script src="lessons.js?v=6"></script>
   <script src="firewall.js?v=11"></script>
-  <script src="app.js?v=28"></script>
+  <script src="app.js?v=29"></script>
 </body>
 </html>

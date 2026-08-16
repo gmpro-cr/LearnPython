@@ -79,21 +79,6 @@ body {
 
 /* Sits inside the panel now, so it should read as part of it rather than as a
    second bordered box fighting the panel's own edge. */
-.panel-toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px; height: 26px;
-  border: 0;
-  border-radius: 6px;
-  background: none;
-  color: var(--line-strong);
-  cursor: pointer;
-  transition: color 200ms var(--ease-out), background 200ms var(--ease-out), transform 150ms var(--ease-out);
-}
-.panel-toggle:hover { color: var(--ink); background: var(--bone); }
-.panel-toggle:active { transform: scale(0.94); }
-
 /* full width on purpose: the wordmark sits at the very left edge of the
    viewport rather than lining up with the 1360px content column */
 .topbar-inner {
@@ -121,7 +106,46 @@ body {
    along the topbar. The sidebar still shows the honest counts in the open, so
    nothing about progress is hidden behind a click. */
 
-.account-menu { position: relative; }
+.account-menu, .journey-menu { position: relative; }
+
+.journey-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--sans);
+  font-size: 12.5px;
+  color: var(--ink);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: border-color 200ms var(--ease-out);
+}
+.journey-trigger:hover { border-color: var(--line-strong); }
+/* keeps progress in the open even while the list is shut */
+.journey-count { font-family: var(--mono); font-size: 11px; color: var(--fern); }
+.journey-menu.open .account-caret { transform: rotate(180deg); }
+
+.journey-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 300px;
+  /* 20 stages plus 19 Firewall rows is taller than any screen */
+  max-height: min(70vh, 640px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 14px 16px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(23, 19, 9, 0.10);
+  z-index: 60;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.journey-panel[hidden] { display: none; }
 
 .account-trigger {
   display: inline-flex;
@@ -292,82 +316,60 @@ body {
 .account-out:hover { color: var(--terracotta); }
 
 @media (max-width: 900px) {
+  .shell { padding: 24px 20px 56px; }
+  .topbar-inner { padding: 12px 20px; }
+  /* the journey is a dropdown at every width now, so it stays a vertical
+     list — the old horizontal chip rail existed only for the side panel.
+     Anchored to the viewport rather than the trigger: at this width a
+     trigger-anchored panel hangs off the left edge. */
+  .journey-panel {
+    position: fixed;
+    top: 56px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-height: 72vh;
+  }
+  .journey-label { display: none; }
   .account-trigger-name { display: none; }
-  .panel-reopen { display: none; }
+  .fw-bar { padding: 10px 12px; }
+  .editor { font-size: 16px; }
+  .hero { padding-top: 8px; }
+  .hero-grid { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+  .hero-title { font-size: 36px; }
+  .stage-title { font-size: 30px; }
+  .kbd-note { display: none; }
+  .exercise-head, .exercise-title, .exercise-brief { padding-left: 20px; padding-right: 20px; }
+  .editor-frame, .hint-box, .verdict, .output-block { margin-left: 20px; margin-right: 20px; }
+  .exercise-actions { padding-left: 20px; padding-right: 20px; }
+  .modal { padding: 36px 28px; margin: 0 16px; }
+  .footer-inner { padding: 16px 20px; }
+  .hero-plate { padding: 0; }
+  .hero-plate .plate-illo { max-width: 210px; }
+  .track-plates { grid-template-columns: minmax(0, 1fr); gap: 34px; margin-top: 20px; }
+  .track-plate { flex-direction: row; align-items: center; gap: 20px; }
+  .track-plate-art { height: auto; flex: 0 0 96px; }
+  .track-plate-art .plate-illo { max-width: 96px; max-height: 128px; }
+  .tracks-block, .specimen-block { margin-top: 42px; padding-top: 24px; }
+  .stage-head { gap: 16px; margin-bottom: 18px; }
+  .stage-vignette { align-self: flex-start; }
+  .stage-vignette .medallion { width: 44px; height: 44px; }
 }
 
 /* ---------- Shell ---------- */
 
-/* Full width, matching the topbar's 22px gutter, so the sidebar's left edge
-   lines up with the wordmark above it. The reading column keeps its measure by
-   centring inside its own track, not by narrowing the page. */
+/* No sidebar any more, so the page centres instead of stretching edge to edge.
+   The lesson column still holds its own measure inside this. */
 .shell {
-  max-width: none;
-  margin: 0;
+  max-width: 1200px;
+  margin: 0 auto;
   width: 100%;
   flex: 1;
-  display: grid;
-  grid-template-columns: 264px minmax(0, 1fr);
-  gap: 44px;
+  display: block;
   padding: 28px 22px 72px;
 }
 
-/* ---------- Sidebar ---------- */
-
-.sidebar {
-  position: sticky;
-  top: 88px;
-  align-self: start;
-  max-height: calc(100vh - 116px);
-  overflow-y: auto;
-  padding: 18px 14px;
-  background: rgba(255, 253, 247, 0.6);
-  backdrop-filter: blur(14px) saturate(160%);
-  -webkit-backdrop-filter: blur(14px) saturate(160%);
-  border: 1px solid rgba(23, 19, 9, 0.09);
-  border-radius: 14px;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
-  transition: opacity 300ms var(--ease-out), transform 300ms var(--ease-out);
-}
-
-.shell { transition: grid-template-columns 350ms var(--ease-out); }
-body.sidebar-hidden .shell { grid-template-columns: 0px minmax(0, 1fr); }
-body.sidebar-hidden .sidebar {
-  opacity: 0;
-  transform: translateX(-18px);
-  pointer-events: none;
-}
-
-.sidebar-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 14px;
-}
-.sidebar-head .sidebar-heading { margin-bottom: 0; }
-
-/* the handle that brings the panel back, since the toggle hides with it */
-.panel-reopen {
-  position: fixed;
-  left: 0;
-  top: 96px;
-  z-index: 40;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px; height: 34px;
-  border: 1px solid var(--border);
-  border-left: 0;
-  border-radius: 0 8px 8px 0;
-  background: var(--surface);
-  color: var(--muted);
-  cursor: pointer;
-  transition: color 200ms var(--ease-out), transform 200ms var(--ease-out);
-}
-.panel-reopen:hover { color: var(--ink); transform: translateX(2px); }
-.panel-reopen[hidden] { display: none; }
+/* ---------- Journey menu ---------- */
 
 .sidebar-heading {
   font-size: 11px;
@@ -1465,84 +1467,6 @@ kbd {
   color: var(--line-strong);
 }
 
-/* ---------- Responsive ---------- */
-
-@media (max-width: 900px) {
-  .shell { grid-template-columns: minmax(0, 1fr); gap: 20px; padding: 24px 20px 56px; }
-  .topbar-inner { padding: 12px 20px; }
-  .sidebar {
-    position: static; max-height: none; overflow: visible;
-    min-width: 0; width: 100%;
-    padding: 0; background: none; border: none; border-radius: 0;
-    backdrop-filter: none; -webkit-backdrop-filter: none;
-  }
-  .panel-toggle { display: none; }
-  body.sidebar-hidden .shell { grid-template-columns: minmax(0, 1fr); }
-  body.sidebar-hidden .sidebar { opacity: 1; transform: none; pointer-events: auto; }
-  .stage-list {
-    flex-direction: row;
-    align-items: center;
-    overflow-x: auto;
-    gap: 6px;
-    padding-bottom: 8px;
-    scrollbar-width: thin;
-  }
-  .track-heading { display: none; }
-  .stage-item {
-    width: auto;
-    flex: 0 0 auto;
-    margin: 0;
-    border: 1px solid var(--border);
-    border-radius: 9999px;
-    padding: 5px 14px 5px 6px;
-    background: var(--surface);
-  }
-  .stage-name { white-space: nowrap; }
-  .hunt-item {
-    width: auto;
-    flex: 0 0 auto;
-    margin: 0;
-    border: 1px solid var(--border);
-    border-radius: 9999px;
-    padding: 5px 12px;
-    background: var(--surface);
-  }
-  .hunt-item.ready { background: var(--pastel-yellow); border-color: transparent; }
-  .hunt-name { white-space: nowrap; }
-  .fw-bar { padding: 10px 12px; }
-  .reset-btn { flex: 0 0 auto; margin: 0 4px 0 10px; white-space: nowrap; }
-  .editor { font-size: 16px; }
-  .stage-item { padding: 8px 15px 8px 7px; }
-  .hunt-item { padding: 7px 13px; }
-  .hero { padding-top: 8px; }
-  .hero-grid { grid-template-columns: minmax(0, 1fr); gap: 32px; }
-  .hero-title { font-size: 36px; }
-  .stage-title { font-size: 30px; }
-  .kbd-note { display: none; }
-  .exercise-head, .exercise-title, .exercise-brief { padding-left: 20px; padding-right: 20px; }
-  .editor-frame, .hint-box, .verdict, .output-block { margin-left: 20px; margin-right: 20px; }
-  .exercise-actions { padding-left: 20px; padding-right: 20px; }
-  .modal { padding: 36px 28px; margin: 0 16px; }
-  .footer-inner { padding: 16px 20px; }
-
-  /* the vine is a vertical climb; the chip rail is not */
-  .vine-layer { display: none; }
-  .stage-list { padding-left: 0; }
-  .stage-num { width: auto; }
-
-  .hero-plate { padding: 0; }
-  .hero-plate .plate-illo { max-width: 210px; }
-  .track-plates { grid-template-columns: minmax(0, 1fr); gap: 34px; margin-top: 20px; }
-  .track-plate { flex-direction: row; align-items: center; gap: 20px; }
-  .track-plate-art { height: auto; flex: 0 0 96px; }
-  .track-plate-art .plate-illo { max-width: 96px; max-height: 128px; }
-  .tracks-block, .specimen-block { margin-top: 42px; padding-top: 24px; }
-
-  .stage-head { gap: 16px; margin-bottom: 18px; }
-  .stage-vignette { align-self: flex-start; }
-  .stage-vignette .medallion { width: 44px; height: 44px; }
-}
-
 /* one column is too cramped for a side-by-side track plate */
 @media (max-width: 520px) {
   .track-plate { flex-direction: column; align-items: flex-start; }
@@ -1560,7 +1484,7 @@ kbd {
   .pulse-ring { animation: none; opacity: 0.5; }
   .jnode { animation: none; }
   .verdict.show { animation: none; }
-  .shell, .sidebar, .modal, .exercise-card, .btn-run { transition: none; }
+  .shell, .journey-panel, .modal, .exercise-card, .btn-run { transition: none; }
 
   /* every drawing arrives finished: the reward still registers, it just does
      not move (illustrations.js also skips arming the paths entirely) */

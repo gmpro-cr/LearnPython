@@ -249,7 +249,7 @@ function refreshSidebar() {
         `<span class="stage-num">${idx + 1}</span>` +
         `<span class="stage-name">${stage.name}</span>` +
         (!unlocked ? `<span class="stage-glyph">${ILLO.pressed(14)}</span>` : "");
-      if (unlocked) btn.addEventListener("click", () => showStage(idx));
+      if (unlocked) btn.addEventListener("click", () => { setJourneyMenu(false); showStage(idx); });
       else btn.disabled = true;
       list.appendChild(btn);
 
@@ -264,7 +264,7 @@ function refreshSidebar() {
         hBtn.innerHTML =
           `<span class="hunt-glyph">${hDone ? CHECK_SVG : BUG_MINI_SVG}</span>` +
           `<span class="hunt-name">Firewall ${idx + 1}${hReady ? " — defend it" : ""}</span>`;
-        if (stageDone(stage)) hBtn.addEventListener("click", () => showBugHunt(idx));
+        if (stageDone(stage)) hBtn.addEventListener("click", () => { setJourneyMenu(false); showBugHunt(idx); });
         else hBtn.disabled = true;
         list.appendChild(hBtn);
       }
@@ -293,6 +293,9 @@ function refreshSidebar() {
   });
   foot.appendChild(reset);
 
+  const count = document.getElementById("journey-count");
+  if (count) count.textContent = `${doneCount()}/${totalExercises}`;
+
   const nxt = nextLevel();
   document.getElementById("progress-note").innerHTML =
     `${doneCount()} of ${totalExercises} exercises` +
@@ -309,13 +312,6 @@ function growVine() {
   const layer = document.getElementById("vine-layer");
   const rail = layer && layer.parentElement;
   if (!layer || !rail) return;
-
-  /* under 900px the stage list turns into a horizontal chip rail, where a
-     climbing stem makes no sense */
-  if (window.matchMedia("(max-width: 900px)").matches) {
-    layer.innerHTML = "";
-    return;
-  }
 
   const height = rail.offsetHeight;
   if (!height) return;
@@ -733,32 +729,35 @@ document.getElementById("home-link").addEventListener("click", (e) => {
   showHome();
 });
 
-// hideable side panel (preference persists per device)
-const panelToggle = document.getElementById("panel-toggle");
-const panelReopen = document.getElementById("panel-reopen");
-function setPanel(hidden, save) {
-  document.body.classList.toggle("sidebar-hidden", hidden);
-  panelToggle.setAttribute("aria-expanded", String(!hidden));
-  panelToggle.setAttribute("aria-label", hidden ? "Show side panel" : "Hide side panel");
-  panelToggle.title = hidden ? "Show side panel" : "Hide side panel";
-  /* the toggle sits on the panel it hides, so a handle stays behind to bring
-     it back — otherwise closing the panel closes the only way to reopen it */
-  if (panelReopen) panelReopen.hidden = !hidden;
-  if (save) {
-    try { localStorage.setItem("pyquest-panel", hidden ? "hidden" : "open"); } catch (e) {}
-  }
+/* The journey menu.
+
+   The vine is measured from the stage rows' offsets, and a hidden element
+   reports every offset as 0 — so it has to be grown when the menu opens, not
+   when the list is rendered. Get that wrong and you get a bare stem. */
+const journeyTrigger = document.getElementById("journey-trigger");
+const journeyPanel = document.getElementById("journey-panel");
+
+function setJourneyMenu(open) {
+  if (!journeyTrigger || !journeyPanel) return;
+  journeyPanel.hidden = !open;
+  journeyTrigger.setAttribute("aria-expanded", String(open));
+  document.getElementById("journey-menu").classList.toggle("open", open);
+  if (open) growVine();
 }
-panelToggle.addEventListener("click", () => {
-  setPanel(!document.body.classList.contains("sidebar-hidden"), true);
-});
-if (panelReopen) {
-  panelReopen.addEventListener("click", () => setPanel(false, true));
-}
-try {
-  // always run it: the reopen handle's visibility is decided here too
-  setPanel(localStorage.getItem("pyquest-panel") === "hidden", false);
-} catch (e) {
-  setPanel(false, false);
+
+if (journeyTrigger) {
+  journeyTrigger.addEventListener("click", (e) => {
+    e.stopPropagation();
+    setJourneyMenu(journeyPanel.hidden);
+  });
+  journeyPanel.addEventListener("click", (e) => e.stopPropagation());
+  document.addEventListener("click", () => setJourneyMenu(false));
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !journeyPanel.hidden) {
+      setJourneyMenu(false);
+      journeyTrigger.focus();
+    }
+  });
 }
 
 document.getElementById("modal-backdrop").addEventListener("click", (e) => {
